@@ -2,1244 +2,286 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard TV — Grupo Valente</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grupo Valente — Março 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  :root {
-    --bg: #080c14;
-    --bg2: #0d1220;
-    --bg3: #121828;
-    --bg4: #1a2135;
-    --border: #1e2d45;
-    --text: #e8edf5;
-    --muted: #6b7fa0;
-    --dim: #3a4a6a;
-    --gold: #f5a623;
-    --gold2: #fbbf24;
-    --blue: #3b82f6;
-    --blue2: #60a5fa;
-    --green: #22c55e;
-    --red: #ef4444;
-    --purple: #a78bfa;
-    --erivan: #3b82f6;
-    --roger: #a78bfa;
-    --lucas: #22c55e;
-  }
-
-  html, body {
-    width: 100%; height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    overflow: hidden;
-  }
-
-  .screen {
-    position: absolute;
-    inset: 0;
-    display: none;
-    flex-direction: column;
-    padding: 28px 52px;
-    gap: 16px;
-    opacity: 0;
-    transition: opacity 0.6s ease;
-  }
-  .screen.active {
-    display: flex;
-    opacity: 1;
-  }
-
-  /* HEADER */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .header-left { display: flex; align-items: center; gap: 24px; }
-  .logo {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 28px;
-    letter-spacing: 2px;
-    color: var(--gold);
-  }
-  .screen-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 32px;
-  }
-  .date-display {
-    font-size: 15px;
-    color: var(--muted);
-    font-weight: 500;
-  }
-  .dots {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-  .dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--dim);
-    transition: background 0.3s;
-    cursor: pointer;
-  }
-  .dot.active { background: var(--gold); }
-
-  /* PROGRESS BAR */
-  .progress-track {
-    height: 8px;
-    border-radius: 99px;
-    background: var(--bg4);
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    border-radius: 99px;
-    transition: width 1s ease;
-  }
-
-  /* KPI CARD */
-  .kpi-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 32px 36px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .kpi-label {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .kpi-value {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 64px;
-    line-height: 1;
-    color: var(--text);
-  }
-  .kpi-value.lg { font-size: 80px; }
-  .kpi-value.gold { color: var(--gold); }
-  .kpi-value.green { color: var(--green); }
-  .kpi-value.red { color: var(--red); }
-  .kpi-sub {
-    font-size: 14px;
-    color: var(--muted);
-    font-weight: 500;
-  }
-
-  /* TELA 1 — VISÃO GERAL */
-  #t1 .main-grid {
-    display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
-    gap: 24px;
-    flex: 1;
-  }
-  #t1 .fat-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px 40px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-  #t1 .fat-card .top { display: flex; flex-direction: column; gap: 12px; }
-  #t1 .fat-value {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 96px;
-    line-height: 1;
-    color: var(--gold);
-  }
-  #t1 .meta-info {
-    font-size: 16px;
-    color: var(--muted);
-    font-weight: 500;
-  }
-  #t1 .pct-big {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 120px;
-    line-height: 1;
-  }
-  #t1 .proj-box {
-    background: var(--bg4);
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-top: 16px;
-  }
-  #t1 .day-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 36px 32px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-  #t1 .day-value {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 56px;
-    line-height: 1;
-    color: var(--text);
-  }
-  #t1 .day-label {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-  #t1 .day-card.today { border-color: var(--gold); }
-  #t1 .day-card.today .day-value { color: var(--gold); }
-
-  /* TELA 2 — RANKING */
-  #t2 .ranking-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 32px;
-    flex: 1;
-  }
-  #t2 .rank-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    position: relative;
-    overflow: hidden;
-  }
-  #t2 .rank-card.above { border-color: var(--green); }
-  #t2 .rank-card.below { border-color: var(--red); }
-  #t2 .rank-card.neutral { border-color: var(--dim); }
-  #t2 .rank-pos {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 120px;
-    color: var(--bg4);
-    position: absolute;
-    right: 20px;
-    top: 10px;
-    line-height: 1;
-  }
-  #t2 .rank-name {
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--text);
-    z-index: 1;
-  }
-  #t2 .rank-fat {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 56px;
-    color: var(--gold);
-    line-height: 1;
-    z-index: 1;
-  }
-  #t2 .rank-pct {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 36px;
-    z-index: 1;
-  }
-  #t2 .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 99px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    width: fit-content;
-    z-index: 1;
-  }
-  #t2 .badge-green { background: rgba(34,197,94,.15); color: var(--green); }
-  #t2 .badge-red { background: rgba(239,68,68,.15); color: var(--red); }
-  #t2 .badge-gray { background: rgba(107,127,160,.15); color: var(--muted); }
-
-  /* TELAS 3-5 — VENDEDOR */
-  .vend-screen .vend-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 14px;
-    flex: 1;
-  }
-  .vend-col {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .vend-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-  }
-  .vend-card-title {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-  .vend-fat-big {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 56px;
-    line-height: 1;
-    color: var(--gold);
-  }
-  .vend-name-big {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 48px;
-    line-height: 1;
-    letter-spacing: 2px;
-  }
-  .kpi-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-  }
-  .kpi-row > .kpi-mini[style*="span 3"] { grid-column: 1 / -1; }
-  .kpi-mini {
-    background: var(--bg4);
-    border-radius: 8px;
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .kpi-mini-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .kpi-mini-val {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px;
-    color: var(--text);
-    line-height: 1;
-  }
-  .list-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 5px 0;
-    border-bottom: 1px solid var(--border);
-    gap: 8px;
-  }
-  .list-item:last-child { border-bottom: none; }
-  .list-item-name {
-    font-size: 12px;
-    color: var(--text);
-    font-weight: 500;
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .list-item-val {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--gold);
-    white-space: nowrap;
-  }
-  .list-rank {
-    font-size: 11px;
-    color: var(--dim);
-    font-weight: 700;
-    width: 16px;
-  }
-  .day-trio {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-  }
-  .day-mini {
-    background: var(--bg4);
-    border-radius: 8px;
-    padding: 8px 10px;
-    text-align: center;
-  }
-  .day-mini.hoje { background: rgba(245,166,35,.1); border: 1px solid rgba(245,166,35,.3); }
-  .day-mini-label { font-size: 10px; color: var(--muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
-  .day-mini-val { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--text); }
-  .day-mini.hoje .day-mini-val { color: var(--gold); }
-
-  /* TELA 6 — HISTÓRICO */
-  #t6 .hist-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    flex: 1;
-    min-height: 0;
-  }
-  #t6 .hist-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 32px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-height: 0;
-    overflow: hidden;
-  }
-  #t6 .hist-card-title {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    flex-shrink: 0;
-  }
-  .chart-wrap { position: relative; flex: 1; min-height: 0; overflow: hidden; }
-
-  /* TIMER BAR */
-  .timer-bar {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    height: 3px;
-    background: var(--bg4);
-  }
-  .timer-fill {
-    height: 100%;
-    background: var(--gold);
-    transition: width linear;
-  }
-
-  /* LEGENDA VENDEDORES */
-  .vend-legend {
-    display: flex;
-    gap: 24px;
-    align-items: center;
-  }
-  .legend-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-  }
-  .legend-label { font-size: 13px; color: var(--muted); font-weight: 500; }
-
-  canvas { width: 100% !important; }
-
-  .insight-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-    margin-top: 4px;
-  }
-  .insight-card.queda { background: rgba(251,113,133,0.08); border: 1px solid rgba(251,113,133,0.25); }
-  .insight-card.queda .insight-title { color: #fb7185; }
-  .insight-card {
-    border-radius: 8px;
-    padding: 7px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .insight-card.silencio { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
-  .insight-card.novo { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
-  .insight-card.concentracao { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.2); }
-  .insight-card.base { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); }
-  .insight-icon { font-size: 12px; margin-bottom: 2px; }
-  .insight-title { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
-  .insight-card.silencio .insight-title { color: #ef4444; }
-  .insight-card.novo .insight-title { color: #22c55e; }
-  .insight-card.concentracao .insight-title { color: var(--gold); }
-  .insight-card.base .insight-title { color: var(--blue2); }
-  .insight-main { font-size: 11px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .insight-sub { font-size: 10px; color: var(--muted); }
+:root {
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+  --accent: #6c63ff; --green: #00c896; --orange: #f5a623; --red: #ff6b6b;
+  --text: #e6edf3; --muted: #8b949e; --border: #30363d;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; color: var(--accent); }
+.header-info { text-align: right; }
+.header-info h1 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; }
+.header-info span { font-size: 12px; color: var(--muted); }
+.nav-link { display: inline-block; margin-top: 6px; padding: 5px 14px; background: var(--accent); color: #fff; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; }
+main { max-width: 1300px; margin: 0 auto; padding: 28px 24px; }
+section { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+section h2 { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1px; color: var(--muted); margin-bottom: 18px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 16px; }
+.kpi-card { background: var(--bg3); border-radius: 10px; padding: 18px; }
+.kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.kpi-val { font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: var(--text); margin: 4px 0; }
+.kpi-sub { font-size: 12px; color: var(--muted); }
+.team-meta-row { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 16px; margin-bottom: 20px; }
+.meta-big { background: var(--bg3); border-radius: 10px; padding: 18px; }
+.meta-big-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.meta-big-val { font-family: 'Bebas Neue', sans-serif; font-size: 28px; margin: 6px 0; }
+.meta-big-sub { font-size: 12px; color: var(--muted); }
+.bar-bg { background: var(--border); border-radius: 4px; height: 6px; margin-top: 10px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+.chart-wrap { position: relative; height: 260px; }
+.vendor-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); gap: 18px; }
+.vendor-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+.vendor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.vendor-name { font-weight: 700; font-size: 15px; }
+.vendor-total { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--green); }
+.vendor-kpis { font-size: 12px; color: var(--muted); display: flex; gap: 12px; margin-bottom: 12px; }
+.meta-cards-row { display: flex; flex-direction: column; gap: 10px; }
+.meta-card { background: var(--bg2); border-radius: 8px; padding: 12px; }
+.meta-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.meta-atual { font-family: 'Bebas Neue', sans-serif; font-size: 20px; margin: 3px 0; }
+.meta-ref { font-size: 11px; color: var(--muted); }
+.drag-handle { cursor: grab; color: var(--muted); font-size: 14px; margin-right: 8px; user-select: none; }
+.section-draggable { cursor: default; }
+.section-draggable:active { cursor: grabbing; }
 </style>
 </head>
 <body>
-
-<!-- TELA 1: VISÃO GERAL -->
-<div class="screen active" id="t1">
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Visão Geral · Maio 2026</div>
-    </div>
-    <div class="header-right">
-      <div class="date-display" id="t1-date"></div>
-      <div class="dots" id="dots"></div>
-    </div>
+<header>
+  <div class="logo">Grupo Valente</div>
+  <div class="header-info">
+    <h1>Março 2026</h1>
+    <span>Mês Fechado · 31 dias no mês</span><br>
+    <a href="vendedores_mar26.html" class="nav-link">Ver por Vendedor →</a>
   </div>
-  <div class="main-grid">
-    <!-- Faturamento -->
-    <div class="fat-card">
-      <div class="top">
-        <div class="kpi-label">Faturamento Maio</div>
-        <div class="fat-value" id="t1-fat">R$ 6.837</div>
-        <div class="meta-info" id="t1-meta">Meta: R$ 110.000</div>
-        <div class="progress-track" style="height:10px;margin-top:8px;">
-          <div class="progress-fill" id="t1-bar" style="background:linear-gradient(90deg,var(--gold),var(--gold2));width:0%"></div>
+</header>
+<main id="sections-container">
+
+<section class="section-draggable" data-key="kpis">
+<h2><span class="drag-handle">⋮⋮</span>Resumo Geral</h2>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Total Vendas</div>
+    <div class="kpi-val" style="color:var(--green)">R$ 114.319</div>
+    <div class="kpi-sub">160 pedidos</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Pedidos</div>
+    <div class="kpi-val">160</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Itens Vendidos</div>
+    <div class="kpi-val">2769</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Clientes</div>
+    <div class="kpi-val">109</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Ticket Médio</div>
+    <div class="kpi-val">R$ 714</div>
+  </div>
+</div>
+</section>
+
+<section class="section-draggable" data-key="metas">
+<h2><span class="drag-handle">⋮⋮</span>Metas da Equipe</h2>
+<div class="team-meta-row">
+  <div class="meta-big">
+    <div class="meta-big-label">Produtos A+B+C</div>
+    <div class="meta-big-val" style="color:var(--accent)">R$ 88.027</div>
+    <div class="meta-big-sub">Meta: R$ 93.000 · 94.7%</div>
+    <div class="bar-bg"><div class="bar-fill" style="width:94.7%;background:#6c63ff"></div></div>
+  </div>
+  <div class="meta-big">
+    <div class="meta-big-label">Meta Global</div>
+    <div class="meta-big-val" style="color:var(--green)">R$ 114.319</div>
+    <div class="meta-big-sub">Meta: R$ 95.000 · 120.3%</div>
+    <div class="bar-bg"><div class="bar-fill" style="width:100.0%;background:#00c896"></div></div>
+  </div>
+  
+</div>
+</section>
+
+<section class="section-draggable" data-key="diario">
+<h2><span class="drag-handle">⋮⋮</span>Evolução Diária</h2>
+<div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+</section>
+
+<section class="section-draggable" data-key="categorias">
+<h2><span class="drag-handle">⋮⋮</span>Vendas por Categoria</h2>
+<div class="chart-wrap"><canvas id="catChart"></canvas></div>
+</section>
+
+<section class="section-draggable" data-key="vendedores">
+<h2><span class="drag-handle">⋮⋮</span>Vendedores</h2>
+<div class="vendor-grid">
+
+        <div class="vendor-card">
+          <div class="vendor-header">
+            <span class="vendor-name">Erivan Lima</span>
+            <span class="vendor-total">R$ 55,611'.replace(',','.')</span>
+          </div>
+          <div class="vendor-kpis">
+            <span>73 pedidos</span>
+            <span>1058 itens</span>
+            <span>52 clientes</span>
+          </div>
+          <div class="meta-cards-row">
+            <div class="meta-card">
+              <div class="meta-label">Produtos A+B+C</div>
+              <div class="meta-atual">R$ 48.292</div>
+              <div class="meta-ref">Meta: R$ 48.000 · 100.6%</div>
+              <div class="bar-bg"><div class="bar-fill" style="width:100.0%;background:#6c63ff"></div></div>
+            </div>
+            <div class="meta-card">
+              <div class="meta-label">Meta Global</div>
+              <div class="meta-atual">R$ 55.611</div>
+              <div class="meta-ref">Meta: R$ 60.000 · 92.7%</div>
+              <div class="bar-bg"><div class="bar-fill" style="width:92.7%;background:#00c896"></div></div>
+            </div></div>
         </div>
-        <div class="meta-info" id="t1-dias">2 de 21 dias úteis</div>
-      </div>
-      <div class="proj-box">
-        <div class="kpi-label" style="margin-bottom:8px;">Projeção de Fechamento</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--green)" id="t1-proj"></div>
-        <div class="kpi-sub" id="t1-proj-sub"></div>
-      </div>
-    </div>
-    <!-- % Meta -->
-    <div class="fat-card" style="align-items:center;justify-content:center;text-align:center;">
-      <div class="kpi-label">Meta Atingida</div>
-      <div class="pct-big" id="t1-pct" style="color:var(--gold)">6,2%</div>
-      <div class="kpi-sub" id="t1-dias-rest"></div>
-    </div>
-    <!-- Ticket médio -->
-    <div class="fat-card" id="t1-ticket" style="justify-content:center;gap:0"></div>
-    <!-- Anteontem -->
-    <div class="day-card">
-      <div>
-        <div class="day-label">Anteontem</div>
-        <div class="day-value" id="t1-d2">R$ 330</div>
-      </div>
-      <div class="kpi-sub">01/05/2026</div>
-    </div>
-    <!-- Hoje -->
-    <div class="day-card today">
-      <div>
-        <div class="day-label" style="color:var(--gold)">Hoje</div>
-        <div class="day-value" id="t1-hoje">R$ 6.507</div>
-      </div>
-      <div class="kpi-sub">02/05/2026 · atualizado</div>
-    </div>
-  </div>
+        <div class="vendor-card">
+          <div class="vendor-header">
+            <span class="vendor-name">Lucas Valente</span>
+            <span class="vendor-total">R$ 32,701'.replace(',','.')</span>
+          </div>
+          <div class="vendor-kpis">
+            <span>44 pedidos</span>
+            <span>830 itens</span>
+            <span>23 clientes</span>
+          </div>
+          <div class="meta-cards-row">
+            <div class="meta-card">
+              <div class="meta-label">Produtos A+B+C</div>
+              <div class="meta-atual">R$ 23.066</div>
+              <div class="meta-ref">Meta: R$ 10.000 · 230.7%</div>
+              <div class="bar-bg"><div class="bar-fill" style="width:100.0%;background:#6c63ff"></div></div>
+            </div></div>
+        </div>
+        <div class="vendor-card">
+          <div class="vendor-header">
+            <span class="vendor-name">Róger Silva</span>
+            <span class="vendor-total">R$ 24,859'.replace(',','.')</span>
+          </div>
+          <div class="vendor-kpis">
+            <span>40 pedidos</span>
+            <span>867 itens</span>
+            <span>36 clientes</span>
+          </div>
+          <div class="meta-cards-row">
+            <div class="meta-card">
+              <div class="meta-label">Produtos A+B+C</div>
+              <div class="meta-atual">R$ 15.521</div>
+              <div class="meta-ref">Meta: R$ 25.000 · 62.1%</div>
+              <div class="bar-bg"><div class="bar-fill" style="width:62.1%;background:#6c63ff"></div></div>
+            </div>
+            <div class="meta-card">
+              <div class="meta-label">Meta Global</div>
+              <div class="meta-atual">R$ 24.859</div>
+              <div class="meta-ref">Meta: R$ 35.000 · 71.0%</div>
+              <div class="bar-bg"><div class="bar-fill" style="width:71.0%;background:#00c896"></div></div>
+            </div></div>
+        </div>
+        <div class="vendor-card">
+          <div class="vendor-header">
+            <span class="vendor-name">Célio Alex</span>
+            <span class="vendor-total">R$ 1,147'.replace(',','.')</span>
+          </div>
+          <div class="vendor-kpis">
+            <span>3 pedidos</span>
+            <span>14 itens</span>
+            <span>3 clientes</span>
+          </div>
+          <div class="meta-cards-row">
+            <div class="meta-card">
+              <div class="meta-label">Produtos A+B+C</div>
+              <div class="meta-atual">R$ 1.147</div>
+              <div class="meta-ref">Meta: R$ 10.000 · 11.5%</div>
+              <div class="bar-bg"><div class="bar-fill" style="width:11.5%;background:#6c63ff"></div></div>
+            </div></div>
+        </div>
 </div>
+</section>
 
-<!-- TELA 2: RANKING -->
-<div class="screen" id="t2">
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Ranking de Vendedores · Maio 2026</div>
-    </div>
-    <div class="header-right">
-      <div class="date-display" id="t2-date"></div>
-      <div class="dots"></div>
-    </div>
-  </div>
-  <div class="ranking-grid" id="t2-ranking"></div>
-</div>
-
-<!-- TELA 3: ERIVAN -->
-<div class="screen vend-screen" id="t3">
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Vendedor · Erivan Lima</div>
-    </div>
-    <div class="header-right">
-      <div class="date-display"></div>
-      <div class="dots"></div>
-    </div>
-  </div>
-  <div class="vend-grid" id="t3-grid"></div>
-</div>
-
-<!-- TELA 4: RÓGER -->
-<div class="screen vend-screen" id="t4">
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Vendedor · Róger Silva</div>
-    </div>
-    <div class="header-right">
-      <div class="date-display"></div>
-      <div class="dots"></div>
-    </div>
-  </div>
-  <div class="vend-grid" id="t4-grid"></div>
-</div>
-
-<!-- TELA 5: LUCAS -->
-<div class="screen vend-screen" id="t5">
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Vendedor · Lucas Valente</div>
-    </div>
-    <div class="header-right">
-      <div class="date-display"></div>
-      <div class="dots"></div>
-    </div>
-  </div>
-  <div class="vend-grid" id="t5-grid"></div>
-</div>
-
-<!-- TELA 6: HISTÓRICO TOTAL 12 MESES -->
-<div class="screen" id="t6">
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Histórico Total · 12 Meses</div>
-    </div>
-    <div class="header-right">
-      <div class="date-display"></div>
-      <div class="dots"></div>
-    </div>
-  </div>
-  <div class="hist-grid" style="grid-template-columns:1fr;">
-    <div class="hist-card">
-      <div class="hist-card-title">Faturamento Total por Mês — Abr/2025 a Abr/2026</div>
-      <div class="chart-wrap"><canvas id="chart-hist-total"></canvas></div>
-    </div>
-  </div>
-</div>
-
-<!-- TELA 7: HISTÓRICO POR VENDEDOR 12 MESES -->
-<div class="screen" id="t7">
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Histórico por Vendedor · 12 Meses</div>
-    </div>
-    <div class="header-right">
-      <div class="vend-legend">
-        <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--erivan)"></div><span class="legend-label">Erivan</span></div>
-        <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--roger)"></div><span class="legend-label">Róger</span></div>
-        <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--lucas)"></div><span class="legend-label">Lucas</span></div>
-      </div>
-      <div class="dots"></div>
-    </div>
-  </div>
-  <div class="hist-grid" style="grid-template-columns:1fr;">
-    <div class="hist-card">
-      <div class="hist-card-title">Faturamento por Vendedor — Abr/2025 a Abr/2026</div>
-      <div class="chart-wrap"><canvas id="chart-hist-vend"></canvas></div>
-    </div>
-  </div>
-</div>
-
-<div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:0%"></div></div>
-
+</main>
 <script>
-const D = {
-  hoje: "2026-05-03",
-  dias_corridos_passados: 3,
-  dias_corridos_total: 31,
-  dias_corridos_restantes: 28,
-  total_maio: 6837.5,
-  ticket_geral: { maio: 1367.5, abril: 558.69, var_pct: 144.8 },
-  meta_empresa: 110000,
-  projecao: 105981.25,
-  dias_com_venda: 2,
-  dias_com_venda: 2,
-  vendas_por_dia: { "01/05": 330.0, "02/05": 6507.5, "03/05": 0 },
-  metas: {
-    "Erivan Lima": { global: 60000, abc: 48000 },
-    "Róger Silva": { global: 35000, abc: 25000 },
-    "Lucas de Mello Valente": { global: null, abc: null }
+const STORAGE_KEY = 'gv_layout_index';
+
+// Daily Chart
+new Chart(document.getElementById('dailyChart'), {
+  type: 'bar',
+  data: {
+    labels: ["02/03", "03/03", "04/03", "05/03", "06/03", "09/03", "10/03", "11/03", "12/03", "13/03", "14/03", "16/03", "17/03", "18/03", "19/03", "20/03", "21/03", "23/03", "24/03", "25/03", "26/03", "27/03", "28/03", "30/03", "31/03"],
+    datasets: [{
+      label: 'Vendas (R$)',
+      data: [4341.0, 13083.37, 12638.0, 1395.0, 10028.0, 6917.0, 3623.0, 6819.0, 2360.0, 764.0, 210.0, 4593.0, 7402.67, 405.0, 6503.0, 2732.0, 241.0, 2622.32, 3346.0, 7940.0, 943.0, 2472.0, 504.0, 5250.67, 7186.0],
+      backgroundColor: 'rgba(108,99,255,0.7)',
+      borderColor: '#6c63ff',
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
   },
-  vendedores: {
-    "Erivan Lima": {
-      fat_maio: 6837.5, fat_abc: 6687.5, pedidos: 5, clientes: 5, ticket_medio: 1367.5, ticket_abril: 564.61, ticket_trend: [725.84, 761.80, 564.61],
-      pct_meta: 11.4, projecao: 105981.25, fat_abril: 28795.33, pedidos_abril: 51,
-      top_clientes: [["SOBERANO EXCLUSIVE BARBERS",6099],["Dom Manoel",330],["SOUL BARBEIROS AMAZONAS SHOPPING",210],["Fabricio de Moraes Marinho",112],["Marcilio de Souza Araújo",86.5]],
-      top_produtos: [["LEAVE-IN 240ML - BABOON",2280],["ÓLEO CONEXÃO - 50ML - MACHO-LÂNDIA",432],["ULTRA HOLD 80G - BABOON",414],["BÁLSAMO XXX MINI - MACHO-LÂNDIA",392],["SHAMPOO XXX MINI - MACHO-LÂNDIA",392]]
-    },
-    "Róger Silva": {
-      fat_maio: 0, fat_abc: 0, pedidos: 0, clientes: 0, ticket_medio: 0, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98], ticket_abril: 426.11, ticket_trend: [488.29, 621.48, 426.11],
-      pct_meta: 0, projecao: 0, fat_abril: 20027, pedidos_abril: 47,
-      top_clientes: [], top_produtos: []
-    },
-    "Lucas de Mello Valente": {
-      fat_maio: 0, fat_abc: 0, pedidos: 0, clientes: 0, ticket_medio: 0, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98], ticket_abril: 426.11, ticket_trend: [488.29, 621.48, 426.11],
-      pct_meta: null, projecao: 0, fat_abril: 29937.9, pedidos_abril: 49,
-      top_clientes: [], top_produtos: []
-    }
-  },
-  historico_total: [
-    {mes:"2025-04",vlr_bruto:97235.19},{mes:"2025-05",vlr_bruto:122155.30},
-    {mes:"2025-06",vlr_bruto:124976.75},{mes:"2025-07",vlr_bruto:104366.53},
-    {mes:"2025-08",vlr_bruto:110585.61},{mes:"2025-09",vlr_bruto:118242.75},
-    {mes:"2025-10",vlr_bruto:134419.98},{mes:"2025-11",vlr_bruto:101740.67},
-    {mes:"2025-12",vlr_bruto:81507.30},{mes:"2026-01",vlr_bruto:87915.83},
-    {mes:"2026-02",vlr_bruto:61461.15},{mes:"2026-03",vlr_bruto:114319.03},
-    {mes:"2026-04",vlr_bruto:83244.23}
-  ],
-  historico_vendedor: {
-    "Erivan Lima": [
-      {mes:"2025-04",vlr_bruto:55684},{mes:"2025-05",vlr_bruto:60240.89},
-      {mes:"2025-06",vlr_bruto:63182.74},{mes:"2025-07",vlr_bruto:52391.85},
-      {mes:"2025-08",vlr_bruto:62565.69},{mes:"2025-09",vlr_bruto:68158.04},
-      {mes:"2025-10",vlr_bruto:68081.29},{mes:"2025-11",vlr_bruto:57587.67},
-      {mes:"2025-12",vlr_bruto:37011.84},{mes:"2026-01",vlr_bruto:47392.16},
-      {mes:"2026-02",vlr_bruto:38469.34},{mes:"2026-03",vlr_bruto:55611.32},
-      {mes:"2026-04",vlr_bruto:28795.33}
-    ],
-    "Róger Silva": [
-      {mes:"2025-04",vlr_bruto:25307.37},{mes:"2025-05",vlr_bruto:35742.51},
-      {mes:"2025-06",vlr_bruto:32635.01},{mes:"2025-07",vlr_bruto:25135.83},
-      {mes:"2025-08",vlr_bruto:26916.70},{mes:"2025-09",vlr_bruto:32788.04},
-      {mes:"2025-10",vlr_bruto:32600.37},{mes:"2025-11",vlr_bruto:28365},
-      {mes:"2025-12",vlr_bruto:23816.85},{mes:"2026-01",vlr_bruto:21881},
-      {mes:"2026-02",vlr_bruto:15136.98},{mes:"2026-03",vlr_bruto:24859},
-      {mes:"2026-04",vlr_bruto:20027}
-    ],
-    "Lucas de Mello Valente": [
-      {mes:"2025-04",vlr_bruto:16243.82},{mes:"2025-05",vlr_bruto:26171.90},
-      {mes:"2025-06",vlr_bruto:28396},{mes:"2025-07",vlr_bruto:26067.19},
-      {mes:"2025-08",vlr_bruto:20883.22},{mes:"2025-09",vlr_bruto:17296.67},
-      {mes:"2025-10",vlr_bruto:33738.32},{mes:"2025-11",vlr_bruto:15788},
-      {mes:"2025-12",vlr_bruto:20229.61},{mes:"2026-01",vlr_bruto:18642.67},
-      {mes:"2026-02",vlr_bruto:7854.83},{mes:"2026-03",vlr_bruto:33848.71},
-      {mes:"2026-04",vlr_bruto:29937.90}
-    ]
-  },
-  insights: {
-    "Erivan Lima": {
-      queda: [
-        {nome:"Barbearia Arena Esportiva", fev:1155, mar:1007, abr:210, pct:-81.8},
-        {nome:"Erivan Souza de Lima", fev:259, mar:242, abr:55, pct:-78.8}
-      ],
-      silencio: [
-        {nome:"ALEXANDRE JAPA - HOMENS COM ESTILO.", valor:3270},
-        {nome:"MR. FEITOZA ALPHAVILLE", valor:1781},
-        {nome:"Thiago Andrade Mavignier", valor:1660}
-      ],
-      novos: [
-        {nome:"SOBERANO EXCLUSIVE BARBERS", valor:6099},
-        {nome:"Fabricio de Moraes Marinho", valor:112},
-        {nome:"Marcilio de Souza Araújo", valor:86.5}
-      ],
-      concentracao: {nome:"SOBERANO EXCLUSIVE BARBERS", pct:89.2},
-      clientes_abril: 44,
-      clientes_maio: 5
-    },
-    "Róger Silva": {
-      queda: [
-        {nome:"Ketimiler Nascimento Belém", fev:650, mar:616, abr:436, pct:-32.9}
-      ],
-      silencio: [
-        {nome:"Anderson Lopes Barros", valor:3500},
-        {nome:"V/ BARBEARIA JC", valor:1215},
-        {nome:"Taisson da Cruz Carneiro", valor:1167}
-      ],
-      novos: [],
-      concentracao: null,
-      clientes_abril: 42,
-      clientes_maio: 0
-    },
-    "Lucas de Mello Valente": {
-      queda: [
-        {nome:"Rômulo Soares do Nascimento", fev:520.5, mar:316, abr:228, pct:-56.2}
-      ],
-      silencio: [
-        {nome:"Marlei Rian Farias de Brito", valor:7047},
-        {nome:"Don Barzini Barbearia", valor:4715},
-        {nome:"Leonis Alcantarino Deodato", valor:3322.9}
-      ],
-      novos: [],
-      concentracao: null,
-      clientes_abril: 28,
-      clientes_maio: 0
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'R$ ' + ctx.parsed.y.toLocaleString('pt-BR',{minimumFractionDigits:2}) } } },
+    scales: {
+      x: { ticks: { color: '#8b949e', maxRotation: 45 }, grid: { color: '#21262d' } },
+      y: { ticks: { color: '#8b949e', callback: v => 'R$ '+v.toLocaleString('pt-BR') }, grid: { color: '#21262d' } }
     }
   }
-};
-
-const fmt = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
-const fmtK = v => v >= 1000 ? 'R$ ' + (v/1000).toFixed(1).replace('.',',') + 'K' : fmt(v);
-const mesLabel = m => {const [y,mo]=m.split('-');const ns=['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];return ns[+mo]+'/'+y.slice(2)};
-const vColors = {'Erivan Lima':'#3b82f6','Róger Silva':'#a78bfa','Lucas de Mello Valente':'#22c55e'};
-const vShort = {'Erivan Lima':'Erivan','Róger Silva':'Róger','Lucas de Mello Valente':'Lucas'};
-
-function initT1() {
-  const pct = D.total_maio / D.meta_empresa * 100;
-  document.getElementById('t1-fat').textContent = fmtK(D.total_maio);
-  document.getElementById('t1-meta').textContent = 'Meta: ' + fmt(D.meta_empresa);
-  document.getElementById('t1-pct').textContent = pct.toFixed(1).replace('.',',') + '%';
-  document.getElementById('t1-pct').style.color = pct >= 50 ? 'var(--green)' : pct >= 30 ? 'var(--gold)' : 'var(--red)';
-  document.getElementById('t1-dias').textContent = D.dias_corridos_passados + ' de ' + D.dias_corridos_total + ' dias corridos';
-  document.getElementById('t1-dias-rest').textContent = D.dias_corridos_restantes + ' dias corridos restantes';
-  setTimeout(()=>{ document.getElementById('t1-bar').style.width = Math.min(pct,100)+'%'; }, 300);
-  document.getElementById('t1-proj').textContent = fmtK(D.projecao);
-  const diff = D.projecao - D.meta_empresa;
-  document.getElementById('t1-proj-sub').textContent = diff >= 0 ? '▲ '+fmtK(diff)+' acima da meta' : '▼ '+fmtK(Math.abs(diff))+' abaixo da meta';
-  document.getElementById('t1-proj-sub').style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
-  document.getElementById('t1-d2').textContent = fmtK(D.vendas_por_dia['01/05']);
-  document.getElementById('t1-hoje').textContent = fmtK(D.vendas_por_dia['02/05']);
-
-  // Ticket médio geral
-  const tkVar = D.ticket_geral.var_pct;
-  const tkEl = document.getElementById('t1-ticket');
-  if(tkEl) {
-    tkEl.innerHTML = `
-      <div class="kpi-label">Ticket Médio · Grupo</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:56px;line-height:1;color:var(--text)">${fmtK(D.ticket_geral.maio)}</div>
-      <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
-        <span style="font-size:13px;color:var(--muted)">Abril: ${fmtK(D.ticket_geral.abril)}</span>
-        <span style="font-size:13px;font-weight:700;color:${tkVar>=0?'var(--green)':'var(--red)'}">${tkVar>=0?'▲':'▼'} ${Math.abs(tkVar).toFixed(1).replace('.',',')}%</span>
-      </div>
-      <div style="font-size:11px;color:var(--dim);margin-top:4px">*início de mês · 5 pedidos</div>
-    `;
-  }
-  const dateStr = new Date(D.hoje+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-  document.getElementById('t1-date').textContent = dateStr.charAt(0).toUpperCase()+dateStr.slice(1);
-}
-
-function initT2() {
-  const vendedores = [
-    {nome:'Erivan Lima', cor:'var(--erivan)'},
-    {nome:'Róger Silva', cor:'var(--roger)'},
-    {nome:'Lucas de Mello Valente', cor:'var(--lucas)'}
-  ];
-  const sorted = vendedores.map(v => ({
-    ...v,
-    data: D.vendedores[v.nome],
-    meta: D.metas[v.nome]
-  })).sort((a,b) => (b.data.fat_maio||0) - (a.data.fat_maio||0));
-
-  const container = document.getElementById('t2-ranking');
-  container.innerHTML = '';
-
-  sorted.forEach((v, i) => {
-    const pct = v.meta.global ? (v.data.fat_maio / v.meta.global * 100) : null;
-    const pctAbc = v.meta.abc ? (v.data.fat_abc / v.meta.abc * 100) : null;
-    const ritmoEsperado = v.meta.global ? (v.meta.global / D.dias_corridos_total * D.dias_corridos_passados) : null;
-    const acima = v.meta.global && v.data.fat_maio >= ritmoEsperado;
-    const statusClass = !v.meta.global ? 'neutral' : acima ? 'above' : 'below';
-    const badgeClass = !v.meta.global ? 'badge-gray' : acima ? 'badge-green' : 'badge-red';
-    const badgeText = !v.meta.global ? 'SEM META' : acima ? '▲ ACIMA DO RITMO' : '▼ ABAIXO DO RITMO';
-    const proj = v.data.projecao;
-
-    const div = document.createElement('div');
-    div.className = 'rank-card ' + statusClass;
-    div.innerHTML = `
-      <div class="rank-pos" style="color:rgba(255,255,255,0.04)">${i+1}</div>
-      <div class="rank-name">${v.nome === 'Lucas de Mello Valente' ? 'Lucas Valente' : v.nome}</div>
-      <div class="rank-fat" style="color:${v.cor}">${fmtK(v.data.fat_maio)}</div>
-
-      ${v.meta.global ? `
-        <div style="display:flex;flex-direction:column;gap:14px">
-          <div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <span style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase">Meta Global</span>
-              <span style="font-size:11px;color:var(--muted)">${fmt(v.meta.global)}</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" style="width:${Math.min(pct||0,100)}%;background:${v.cor}"></div>
-            </div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${v.cor};margin-top:4px">${(pct||0).toFixed(1).replace('.',',')}%</div>
-          </div>
-          <div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <span style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase">Meta ABC</span>
-              <span style="font-size:11px;color:var(--muted)">${fmt(v.meta.abc)}</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" style="width:${Math.min(pctAbc||0,100)}%;background:var(--gold)"></div>
-            </div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);margin-top:4px">${(pctAbc||0).toFixed(1).replace('.',',')}%</div>
-          </div>
-        </div>
-      ` : `<div style="font-size:16px;color:var(--muted)">Sem meta definida</div><div></div>`}
-
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div class="status-badge ${badgeClass}">${badgeText}</div>
-        ${v.meta.global && proj > 0 ? `
-          <div style="background:var(--bg4);border-radius:10px;padding:12px 14px">
-            <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Projeção</div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:${proj>=v.meta.global?'var(--green)':'var(--red)'}">${fmtK(proj)}</div>
-          </div>
-        ` : `<div style="font-size:13px;color:var(--muted)">Abril: ${fmtK(v.data.fat_abril)}</div>`}
-      </div>
-    `;
-    container.appendChild(div);
-  });
-}
-
-function buildVendedorGrid(containerId, vendNome, accentColor) {
-  const v = D.vendedores[vendNome];
-  const meta = D.metas[vendNome];
-  const pct = meta.global ? (v.fat_maio / meta.global * 100) : null;
-  const ritmoEsperado = meta.global ? (meta.global / D.dias_corridos_total * D.dias_corridos_passados) : null;
-  const acima = meta.global && v.fat_maio >= ritmoEsperado;
-  const container = document.getElementById(containerId);
-
-  const ins = D.insights[vendNome];
-  const listaClientes = v.top_clientes.length > 0
-    ? v.top_clientes.map((c,i) => `<div class="list-item"><span class="list-rank">${i+1}</span><span class="list-item-name">${c[0]}</span><span class="list-item-val">${fmtK(c[1])}</span></div>`).join('')
-    : '<div style="color:var(--muted);font-size:14px;padding:20px 0">Sem vendas no mês</div>';
-
-  const silencioTop = ins.silencio[0] || null;
-  const novoTop = ins.novos[0] || null;
-  const insightsHTML = `
-    <div class="insight-grid">
-      <div class="insight-card silencio">
-        <div class="insight-title">🔇 Em silêncio</div>
-        <div class="insight-main">${silencioTop ? silencioTop.nome.split(' - ')[0].split(' ').slice(0,3).join(' ') : '—'}</div>
-        <div class="insight-sub">${silencioTop ? fmtK(silencioTop.valor)+' em abril' : 'Nenhum'}</div>
-      </div>
-      <div class="insight-card novo">
-        <div class="insight-title">✨ Novo em maio</div>
-        <div class="insight-main">${novoTop ? novoTop.nome.split(' - ')[0].split(' ').slice(0,3).join(' ') : '—'}</div>
-        <div class="insight-sub">${novoTop ? fmtK(novoTop.valor) : 'Nenhum novo'}</div>
-      </div>
-      <div class="insight-card concentracao">
-        <div class="insight-title">⚠ Concentração</div>
-        <div class="insight-main">${ins.concentracao ? ins.concentracao.pct.toFixed(1).replace('.',',')+'% top 1' : '—'}</div>
-        <div class="insight-sub">${ins.concentracao ? ins.concentracao.nome.split(' ').slice(0,2).join(' ') : 'Sem dados'}</div>
-      </div>
-      <div class="insight-card base">
-        <div class="insight-title">👥 Base ativa</div>
-        <div class="insight-main">${ins.clientes_maio} de ${ins.clientes_abril}</div>
-        <div class="insight-sub">clientes de abril ativos</div>
-      </div>
-      ${ins.queda && ins.queda.length > 0 ? `
-      <div class="insight-card queda" style="grid-column:span 2">
-        <div class="insight-title">📉 Em queda · Fev→Mar→Abr</div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px">
-          ${ins.queda.map(q => `
-            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:160px">
-              <div>
-                <div class="insight-main">${q.nome.split(' ').slice(0,3).join(' ')}</div>
-                <div class="insight-sub">${fmtK(q.fev)} → ${fmtK(q.mar)} → ${fmtK(q.abr)} &nbsp;<span style="color:#fb7185;font-weight:700">${q.pct.toFixed(1).replace('.',',')}%</span></div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>` : ''}
-    </div>
-  `;
-
-  const listaProd = v.top_produtos.length > 0
-    ? v.top_produtos.map((p,i) => {
-        const nome = p[0].split(' - ')[0];
-        const marca = p[0].includes(' - ') ? p[0].split(' - ').pop() : '';
-        return `<div class="list-item"><span class="list-rank">${i+1}</span><span class="list-item-name" title="${p[0]}">${nome}${marca?' <span style="color:var(--muted);font-size:11px">'+marca+'</span>':''}</span><span class="list-item-val">${fmtK(p[1])}</span></div>`;
-      }).join('')
-    : '<div style="color:var(--muted);font-size:14px;padding:20px 0">Sem vendas no mês</div>';
-
-  container.innerHTML = `
-    <div class="vend-col">
-      <div class="vend-card" style="border-color:${accentColor}33;flex:0">
-        <div class="vend-card-title">Faturamento Maio</div>
-        <div class="vend-fat-big" style="color:${accentColor}">${fmtK(v.fat_maio)}</div>
-        ${meta.global ? `
-          <div style="margin-top:12px">
-            <div class="progress-track"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${accentColor}"></div></div>
-            <div style="display:flex;justify-content:space-between;margin-top:8px">
-              <span style="font-size:13px;color:var(--muted)">${(pct).toFixed(1).replace('.',',')}% da meta</span>
-              <span style="font-size:13px;color:var(--muted)">${fmt(meta.global)}</span>
-            </div>
-          </div>
-        ` : '<div style="font-size:13px;color:var(--muted);margin-top:8px">Sem meta definida</div>'}
-      </div>
-      <div class="vend-card" style="flex:0">
-        <div class="vend-card-title">Anteontem · Ontem · Hoje</div>
-        <div class="day-trio">
-          <div class="day-mini"><div class="day-mini-label">01/05</div><div class="day-mini-val">${v.fat_maio > 0 && vendNome==='Erivan Lima' ? fmtK(330) : 'R$ 0'}</div></div>
-          <div class="day-mini hoje"><div class="day-mini-label">02/05</div><div class="day-mini-val">${vendNome==='Erivan Lima' ? fmtK(6507.5) : 'R$ 0'}</div></div>
-          <div class="day-mini"><div class="day-mini-label">Hoje</div><div class="day-mini-val">—</div></div>
-        </div>
-      </div>
-      <div class="vend-card" style="flex:1">
-        <div class="vend-card-title">KPIs do Mês</div>
-        <div class="kpi-row">
-          <div class="kpi-mini" style="grid-column:span 3;background:transparent;padding:0">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-              <div class="kpi-mini">
-                <div class="kpi-mini-label">Ticket Maio</div>
-                <div class="kpi-mini-val" style="color:${accentColor}">${v.ticket_medio > 0 ? fmtK(v.ticket_medio) : '—'}</div>
-              </div>
-              <div class="kpi-mini">
-                <div class="kpi-mini-label">Ticket Abril</div>
-                <div class="kpi-mini-val" style="color:var(--muted)">${fmtK(v.ticket_abril)}</div>
-              </div>
-              <div class="kpi-mini">
-                <div class="kpi-mini-label">Tend. Fev·Mar·Abr</div>
-                <div style="display:flex;align-items:flex-end;gap:4px;margin-top:4px">
-                  ${v.ticket_trend.map((t,i)=>{
-                    const h = Math.round(20 + (t / Math.max(...v.ticket_trend)) * 24);
-                    const isLast = i===v.ticket_trend.length-1;
-                    const trend = v.ticket_trend[v.ticket_trend.length-1] >= v.ticket_trend[0];
-                    return '<div title="'+fmtK(t)+'" style="width:18px;height:'+h+'px;border-radius:4px 4px 0 0;background:'+(isLast?(trend?accentColor:'var(--red)'):'var(--bg4)')+'"></div>';
-                  }).join('')}
-                  <span style="font-size:11px;color:${v.ticket_trend[2]>=v.ticket_trend[0]?accentColor:'var(--red)'};margin-left:4px;font-weight:700">${v.ticket_trend[2]>=v.ticket_trend[0]?'▲':'▼'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="kpi-mini"><div class="kpi-mini-label">Pedidos</div><div class="kpi-mini-val">${v.pedidos}</div></div>
-          <div class="kpi-mini"><div class="kpi-mini-label">Clientes</div><div class="kpi-mini-val">${v.clientes}</div></div>
-        </div>
-        ${meta.global ? `
-        <div style="margin-top:16px;padding:14px;background:var(--bg4);border-radius:10px">
-          <div class="kpi-mini-label" style="margin-bottom:8px">Projeção de Fechamento</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${v.projecao >= meta.global ? 'var(--green)' : 'var(--red)'}">${v.projecao > 0 ? fmtK(v.projecao) : '—'}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px">Abril: ${fmtK(v.fat_abril)} · ${v.pedidos_abril} pedidos</div>
-        </div>` : `
-        <div style="margin-top:16px;padding:14px;background:var(--bg4);border-radius:10px">
-          <div class="kpi-mini-label" style="margin-bottom:4px">Abril 2026</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${accentColor}">${fmtK(v.fat_abril)}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px">${v.pedidos_abril} pedidos</div>
-        </div>`}
-      </div>
-    </div>
-    <div class="vend-col">
-      <div class="vend-card" style="flex:1">
-        <div class="vend-card-title">Top 5 Clientes · Maio</div>
-        ${listaClientes}
-        ${insightsHTML}
-      </div>
-    </div>
-    <div class="vend-col">
-      <div class="vend-card" style="flex:1">
-        <div class="vend-card-title">Top 5 Produtos · Maio</div>
-        ${listaProd}
-      </div>
-      <div class="vend-card" style="flex:0">
-        <div class="vend-card-title">vs Mês Anterior (Abril)</div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--muted)">${fmtK(v.fat_abril)}</div>
-            <div style="font-size:12px;color:var(--muted)">Abril 2026</div>
-          </div>
-          <div style="font-size:28px;color:var(--dim)">→</div>
-          <div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:${accentColor}">${fmtK(v.fat_maio)}</div>
-            <div style="font-size:12px;color:var(--muted)">Maio 2026</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-const chartDefaults = {
-  responsive: true, maintainAspectRatio: false, animation: { duration: 800 },
-  plugins: { legend: { display: false }, tooltip: {
-    backgroundColor:'#1a2135', titleColor:'#e8edf5', bodyColor:'#6b7fa0',
-    borderColor:'#1e2d45', borderWidth:1, padding:14,
-    callbacks: { label: ctx => ' '+fmtK(ctx.raw) }
-  }},
-  scales: {
-    x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#6b7fa0',font:{size:15,family:'Inter'},maxRotation:0} },
-    y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#6b7fa0',font:{size:14,family:'Inter'},callback:v=>fmtK(v)}, beginAtZero:true }
-  }
-};
-
-function initT6() {
-  const labels = D.historico_total.map(h => mesLabel(h.mes));
-  const totais = D.historico_total.map(h => h.vlr_bruto);
-  const meta = D.meta_empresa;
-
-  // Regressão linear para tendência
-  const tendenciaTotal = vals => {
-    const n2 = vals.length;
-    const xs = vals.map((_,i)=>i);
-    const mx = xs.reduce((a,b)=>a+b,0)/n2;
-    const my = vals.reduce((a,b)=>a+b,0)/n2;
-    const num = xs.reduce((s,x,i)=>s+(x-mx)*(vals[i]-my),0);
-    const den = xs.reduce((s,x)=>s+(x-mx)**2,0);
-    const slope = den ? num/den : 0;
-    const intercept = my - slope*mx;
-    return xs.map(x => Math.round((intercept + slope*x)*100)/100);
-  };
-
-  new Chart(document.getElementById('chart-hist-total'), {
-    type:'bar',
-    data:{
-      labels,
-      datasets:[
-        {
-          type:'bar',
-          data: totais,
-          backgroundColor: totais.map((_,i) => i===totais.length-1 ? 'rgba(245,166,35,0.85)' : 'rgba(59,130,246,0.55)'),
-          borderColor: totais.map((_,i) => i===totais.length-1 ? '#f5a623' : '#3b82f6'),
-          borderWidth: 2, borderRadius: 10, label:'Faturamento', order:2
-        },
-        {
-          type:'line',
-          data: labels.map(() => meta),
-          borderColor:'rgba(239,68,68,0.65)',
-          borderWidth:2, borderDash:[8,4],
-          pointRadius:0, fill:false, label:'Meta',
-          tension:0, order:1
-        },
-        {
-          type:'line',
-          data: tendenciaTotal(totais),
-          borderColor:'rgba(251,191,36,0.8)',
-          borderWidth:3, borderDash:[6,4],
-          pointRadius:0, fill:false, label:'Tendência',
-          tension:0, order:0
-        }
-      ]
-    },
-    options: {
-      ...chartDefaults,
-      plugins:{
-        ...chartDefaults.plugins,
-        legend:{display:true, labels:{color:'#6b7fa0',font:{size:14},boxWidth:12,padding:20}},
-        tooltip:{...chartDefaults.plugins.tooltip}
-      }
-    }
-  });
-}
-
-function initT7() {
-  const labels = D.historico_total.map(h => mesLabel(h.mes));
-  const n = labels.length;
-  const getHist = nome => {
-    const map = {};
-    D.historico_vendedor[nome].forEach(h => map[h.mes]=h.vlr_bruto);
-    return D.historico_total.map(h => map[h.mes]||0);
-  };
-  // Regressão linear
-  const tendencia = vals => {
-    const n2 = vals.length;
-    const xs = vals.map((_,i)=>i);
-    const mx = xs.reduce((a,b)=>a+b,0)/n2;
-    const my = vals.reduce((a,b)=>a+b,0)/n2;
-    const num = xs.reduce((s,x,i)=>s+(x-mx)*(vals[i]-my),0);
-    const den = xs.reduce((s,x)=>s+(x-mx)**2,0);
-    const slope = den ? num/den : 0;
-    const intercept = my - slope*mx;
-    return xs.map(x => Math.round((intercept + slope*x)*100)/100);
-  };
-
-  const eData = getHist('Erivan Lima');
-  const rData = getHist('Róger Silva');
-  const lData = getHist('Lucas de Mello Valente');
-
-  new Chart(document.getElementById('chart-hist-vend'), {
-    type:'line',
-    data:{
-      labels,
-      datasets:[
-        // Linhas principais
-        {label:'Erivan',data:eData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:'#3b82f6',pointBorderColor:'#0d1220',pointBorderWidth:2,borderWidth:3,fill:true,order:1},
-        {label:'Róger',data:rData,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:'#a78bfa',pointBorderColor:'#0d1220',pointBorderWidth:2,borderWidth:3,fill:true,order:2},
-        {label:'Lucas',data:lData,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:'#22c55e',pointBorderColor:'#0d1220',pointBorderWidth:2,borderWidth:3,fill:true,order:3},
-        // Tendências tracejadas
-        {label:'Tendência Erivan',data:tendencia(eData),borderColor:'rgba(59,130,246,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:4},
-        {label:'Tendência Róger',data:tendencia(rData),borderColor:'rgba(167,139,250,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:5},
-        {label:'Tendência Lucas',data:tendencia(lData),borderColor:'rgba(34,197,94,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:6},
-      ]
-    },
-    options:{
-      ...chartDefaults,
-      plugins:{
-        ...chartDefaults.plugins,
-        legend:{
-          display:true,
-          labels:{
-            color:'#8892a4',font:{size:14,family:'Inter'},boxWidth:14,padding:20,
-            filter: item => !item.text.startsWith('Tendência')
-          }
-        },
-        tooltip:{
-          ...chartDefaults.plugins.tooltip,
-          callbacks:{
-            label: ctx => {
-              const isMed = ctx.dataset.label.startsWith('Tendência');
-              const prefix = isMed ? ' ↗ Tend. ' + ctx.dataset.label.replace('Tendência ','') + ':' : ' ' + ctx.dataset.label + ':';
-              return prefix + ' ' + fmtK(ctx.raw);
-            }
-          }
-        }
-      }
-    }
-  });
-}
-
-// DOTS
-function buildDots() {
-  const total = 7;
-  document.querySelectorAll('.dots').forEach(container => {
-    container.innerHTML = '';
-    for(let i=0;i<total;i++){
-      const d = document.createElement('div');
-      d.className = 'dot';
-      d.onclick = () => goTo(i);
-      container.appendChild(d);
-    }
-  });
-}
-
-function updateDots(idx) {
-  document.querySelectorAll('.dots').forEach(container => {
-    container.querySelectorAll('.dot').forEach((d,i) => {
-      d.classList.toggle('active', i===idx);
-    });
-  });
-}
-
-// ROTAÇÃO
-const SCREENS = ['t1','t2','t3','t4','t5','t6','t7'];
-const DURATION = 30000;
-let current = 0;
-let timerInterval = null;
-let timerStart = null;
-
-function goTo(idx) {
-  document.getElementById(SCREENS[current]).classList.remove('active');
-  current = idx % SCREENS.length;
-  const el = document.getElementById(SCREENS[current]);
-  el.classList.add('active');
-  updateDots(current);
-  startTimer();
-}
-
-function startTimer() {
-  clearInterval(timerInterval);
-  const fill = document.getElementById('timer-fill');
-  fill.style.transition = 'none';
-  fill.style.width = '0%';
-  timerStart = Date.now();
-  setTimeout(() => {
-    fill.style.transition = `width ${DURATION}ms linear`;
-    fill.style.width = '100%';
-  }, 50);
-  timerInterval = setInterval(() => { goTo(current+1); }, DURATION);
-}
-
-// INIT
-buildDots();
-updateDots(0);
-initT1();
-initT2();
-buildVendedorGrid('t3-grid','Erivan Lima','#3b82f6');
-buildVendedorGrid('t4-grid','Róger Silva','#a78bfa');
-buildVendedorGrid('t5-grid','Lucas de Mello Valente','#22c55e');
-setTimeout(() => { initT6(); initT7(); }, 100);
-startTimer();
-
-// Data em tempo real
-setInterval(() => {
-  const now = new Date();
-  const str = now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-  document.querySelectorAll('#t1-date, #t2-date').forEach(el => { if(el) el.textContent = str.charAt(0).toUpperCase()+str.slice(1); });
-}, 60000);
-document.querySelectorAll('#t1-date, #t2-date').forEach(el => {
-  if(el){const now=new Date();const str=now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});el.textContent=str.charAt(0).toUpperCase()+str.slice(1);}
 });
+
+// Category Chart
+new Chart(document.getElementById('catChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ["Produtos A", "Produtos B", "Produtos C", "Acess\u00f3rios A", "Acess\u00f3rios B", "Maquin\u00e1rio", "Movelaria", "Outros"],
+    datasets: [{
+      data: [36781.37, 12263.66, 38982.0, 2419.0, 3147.0, 17013.0, 3535.0, 178.0],
+      backgroundColor: ['#6c63ff','#00c896','#f5a623','#ff6b6b','#45b7d1','#96ceb4','#feca57','#ff9ff3','#54a0ff'],
+      borderWidth: 2,
+      borderColor: '#161b22'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'right', labels: { color: '#e6edf3', font: { size: 12 } } },
+      tooltip: { callbacks: { label: ctx => ctx.label + ': R$ ' + ctx.parsed.toLocaleString('pt-BR',{minimumFractionDigits:2}) } }
+    }
+  }
+});
+
+// Drag & Drop
+const container = document.getElementById('sections-container');
+const sortable = Sortable.create(container, {
+  handle: '.drag-handle',
+  animation: 150,
+  onEnd: () => {
+    const order = [...container.children].map(el => el.dataset.key);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+  }
+});
+
+// Restore order
+const saved = localStorage.getItem(STORAGE_KEY);
+if (saved) {
+  try {
+    const order = JSON.parse(saved);
+    order.forEach(key => {
+      const el = container.querySelector('[data-key="'+key+'"]');
+      if (el) container.appendChild(el);
+    });
+  } catch(e) {}
+}
 </script>
 </body>
 </html>
