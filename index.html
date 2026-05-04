@@ -581,7 +581,7 @@
   <div class="header">
     <div class="header-left">
       <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Vendedor · Lucas Valente</div>
+      <div class="screen-label">Vendedor · Grupo Valente</div>
     </div>
     <div class="header-right">
       <div class="date-display"></div>
@@ -605,7 +605,7 @@
   </div>
   <div class="hist-grid" style="grid-template-columns:1fr;">
     <div class="hist-card">
-      <div class="hist-card-title">Faturamento Total por Mês — Abr/2025 a Abr/2026</div>
+      <div class="hist-card-title">Faturamento Total por Mês — Abr/2025 a Mai/2026</div>
       <div class="chart-wrap"><canvas id="chart-hist-total"></canvas></div>
     </div>
   </div>
@@ -622,14 +622,14 @@
       <div class="vend-legend">
         <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--erivan)"></div><span class="legend-label">Erivan</span></div>
         <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--roger)"></div><span class="legend-label">Róger</span></div>
-        <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--lucas)"></div><span class="legend-label">Lucas</span></div>
+        <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--lucas)"></div><span class="legend-label">Grupo Valente</span></div>
       </div>
       <div class="dots"></div>
     </div>
   </div>
   <div class="hist-grid" style="grid-template-columns:1fr;">
     <div class="hist-card">
-      <div class="hist-card-title">Faturamento por Vendedor — Abr/2025 a Abr/2026</div>
+      <div class="hist-card-title">Faturamento por Vendedor — Abr/2025 a Mai/2026</div>
       <div class="chart-wrap"><canvas id="chart-hist-vend"></canvas></div>
     </div>
   </div>
@@ -639,17 +639,16 @@
 
 <script>
 const D = {
-  hoje: "2026-05-03",
-  dias_corridos_passados: 3,
+  hoje: "2026-05-04",
+  dias_corridos_passados: 4,
   dias_corridos_total: 31,
-  dias_corridos_restantes: 28,
-  total_maio: 6837.5,
-  ticket_geral: { maio: 1367.5, abril: 558.69, var_pct: 144.8 },
+  dias_corridos_restantes: 27,
+  total_maio: 7834.0,
+  ticket_geral: { maio: 1305.67, abril: 558.69, var_pct: 133.7 },
   meta_empresa: 110000,
-  projecao: 105981.25,
-  dias_com_venda: 2,
-  dias_com_venda: 2,
-  vendas_por_dia: { "01/05": 330.0, "02/05": 6507.5, "03/05": 0 },
+  projecao: 60713.5,
+  dias_com_venda: 3,
+  vendas_por_dia: { "01/05": 165.0, "02/05": 6589.0, "03/05": 0, "04/05": 1080.0 },
   metas: {
     "Erivan Lima": { global: 60000, abc: 48000 },
     "Róger Silva": { global: 35000, abc: 25000 },
@@ -657,10 +656,10 @@ const D = {
   },
   vendedores: {
     "Erivan Lima": {
-      fat_maio: 6837.5, fat_abc: 6687.5, pedidos: 5, clientes: 5, ticket_medio: 1367.5, ticket_abril: 564.61, ticket_trend: [725.84, 761.80, 564.61],
-      pct_meta: 11.4, projecao: 105981.25, fat_abril: 28795.33, pedidos_abril: 51,
-      top_clientes: [["SOBERANO EXCLUSIVE BARBERS",6099],["Dom Manoel",330],["SOUL BARBEIROS AMAZONAS SHOPPING",210],["Fabricio de Moraes Marinho",112],["Marcilio de Souza Araújo",86.5]],
-      top_produtos: [["LEAVE-IN 240ML - BABOON",2280],["ÓLEO CONEXÃO - 50ML - MACHO-LÂNDIA",432],["ULTRA HOLD 80G - BABOON",414],["BÁLSAMO XXX MINI - MACHO-LÂNDIA",392],["SHAMPOO XXX MINI - MACHO-LÂNDIA",392]]
+      fat_maio: 7834.0, fat_abc: 7684.0, pedidos: 6, clientes: 6, ticket_medio: 1305.67, ticket_abril: 564.61, ticket_trend: [725.84, 761.80, 564.61],
+      pct_meta: 13.1, projecao: 60713.5, fat_abril: 28795.33, pedidos_abril: 51,
+      top_clientes: [["SOBERANO EXCLUSIVE BARBERS",6099],["Procópio Serviço Combinado de Apoio Administrativo Ltda",1080],["SOUL BARBEIROS AMAZONAS SHOPPING",210],["Marcilio de Souza Araújo",168],["Dom Manoel",165],["Fabricio de Moraes Marinho",112]],
+      top_produtos: [["LEAVE-IN 240ML - BABOON",2736],["ULTRA HOLD 80G - BABOON",621],["ÓLEO CONEXÃO - 50ML - MACHO-LÂNDIA",432],["BÁLSAMO XXX MINI - MACHO-LÂNDIA",392],["SHAMPOO XXX MINI - MACHO-LÂNDIA",392],["ÓLEO CONEXÃO 230ML PRO - MACHO-LÂNDIA",370],["SHAMPOO LAVATÓRIO 2000ML - SHARK BARBER",350],["CONDICIONADOR LAVATÓRIO 2000ML - SHARK BARBER",350]]
     },
     "Róger Silva": {
       fat_maio: 0, fat_abc: 0, pedidos: 0, clientes: 0, ticket_medio: 0, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98], ticket_abril: 426.11, ticket_trend: [488.29, 621.48, 426.11],
@@ -680,7 +679,8 @@ const D = {
     {mes:"2025-10",vlr_bruto:134419.98},{mes:"2025-11",vlr_bruto:101740.67},
     {mes:"2025-12",vlr_bruto:81507.30},{mes:"2026-01",vlr_bruto:87915.83},
     {mes:"2026-02",vlr_bruto:61461.15},{mes:"2026-03",vlr_bruto:114319.03},
-    {mes:"2026-04",vlr_bruto:83244.23}
+    {mes:"2026-04",vlr_bruto:83244.23},
+    {mes:"2026-05",vlr_bruto:60713.5,projecao:true}
   ],
   historico_vendedor: {
     "Erivan Lima": [
@@ -690,7 +690,8 @@ const D = {
       {mes:"2025-10",vlr_bruto:68081.29},{mes:"2025-11",vlr_bruto:57587.67},
       {mes:"2025-12",vlr_bruto:37011.84},{mes:"2026-01",vlr_bruto:47392.16},
       {mes:"2026-02",vlr_bruto:38469.34},{mes:"2026-03",vlr_bruto:55611.32},
-      {mes:"2026-04",vlr_bruto:28795.33}
+      {mes:"2026-04",vlr_bruto:28795.33},
+      {mes:"2026-05",vlr_bruto:60713.5,projecao:true}
     ],
     "Róger Silva": [
       {mes:"2025-04",vlr_bruto:25307.37},{mes:"2025-05",vlr_bruto:35742.51},
@@ -699,7 +700,8 @@ const D = {
       {mes:"2025-10",vlr_bruto:32600.37},{mes:"2025-11",vlr_bruto:28365},
       {mes:"2025-12",vlr_bruto:23816.85},{mes:"2026-01",vlr_bruto:21881},
       {mes:"2026-02",vlr_bruto:15136.98},{mes:"2026-03",vlr_bruto:24859},
-      {mes:"2026-04",vlr_bruto:20027}
+      {mes:"2026-04",vlr_bruto:20027},
+      {mes:"2026-05",vlr_bruto:0,projecao:true}
     ],
     "Lucas de Mello Valente": [
       {mes:"2025-04",vlr_bruto:16243.82},{mes:"2025-05",vlr_bruto:26171.90},
@@ -708,7 +710,8 @@ const D = {
       {mes:"2025-10",vlr_bruto:33738.32},{mes:"2025-11",vlr_bruto:15788},
       {mes:"2025-12",vlr_bruto:20229.61},{mes:"2026-01",vlr_bruto:18642.67},
       {mes:"2026-02",vlr_bruto:7854.83},{mes:"2026-03",vlr_bruto:33848.71},
-      {mes:"2026-04",vlr_bruto:29937.90}
+      {mes:"2026-04",vlr_bruto:29937.90},
+      {mes:"2026-05",vlr_bruto:0,projecao:true}
     ]
   },
   insights: {
@@ -724,12 +727,14 @@ const D = {
       ],
       novos: [
         {nome:"SOBERANO EXCLUSIVE BARBERS", valor:6099},
-        {nome:"Fabricio de Moraes Marinho", valor:112},
-        {nome:"Marcilio de Souza Araújo", valor:86.5}
+        {nome:"Procópio Serviço Combinado de Apoio Administrativo Ltda", valor:1080},
+        {nome:"Marcilio de Souza Araújo", valor:168},
+        {nome:"Dom Manoel", valor:165},
+        {nome:"Fabricio de Moraes Marinho", valor:112}
       ],
-      concentracao: {nome:"SOBERANO EXCLUSIVE BARBERS", pct:89.2},
+      concentracao: {nome:"SOBERANO EXCLUSIVE BARBERS", pct:77.9},
       clientes_abril: 44,
-      clientes_maio: 5
+      clientes_maio: 6
     },
     "Róger Silva": {
       queda: [
@@ -766,7 +771,7 @@ const fmt = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 const fmtK = v => v >= 1000 ? 'R$ ' + (v/1000).toFixed(1).replace('.',',') + 'K' : fmt(v);
 const mesLabel = m => {const [y,mo]=m.split('-');const ns=['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];return ns[+mo]+'/'+y.slice(2)};
 const vColors = {'Erivan Lima':'#3b82f6','Róger Silva':'#a78bfa','Lucas de Mello Valente':'#22c55e'};
-const vShort = {'Erivan Lima':'Erivan','Róger Silva':'Róger','Lucas de Mello Valente':'Lucas'};
+const vShort = {'Erivan Lima':'Erivan','Róger Silva':'Róger','Lucas de Mello Valente':'Grupo Valente'};
 
 function initT1() {
   const pct = D.total_maio / D.meta_empresa * 100;
@@ -831,7 +836,7 @@ function initT2() {
     div.className = 'rank-card ' + statusClass;
     div.innerHTML = `
       <div class="rank-pos" style="color:rgba(255,255,255,0.04)">${i+1}</div>
-      <div class="rank-name">${v.nome === 'Lucas de Mello Valente' ? 'Lucas Valente' : v.nome}</div>
+      <div class="rank-name">${v.nome === 'Lucas de Mello Valente' ? 'Grupo Valente' : v.nome}</div>
       <div class="rank-fat" style="color:${v.cor}">${fmtK(v.data.fat_maio)}</div>
 
       ${v.meta.global ? `
@@ -1128,19 +1133,26 @@ function initT7() {
   const rData = getHist('Róger Silva');
   const lData = getHist('Lucas de Mello Valente');
 
+  // Indices que representam projecao (mes atual ainda em curso)
+  const projIdx = new Set(D.historico_total.map((h,i) => h.projecao ? i : -1).filter(i => i>=0));
+  const isProj = i => projIdx.has(i);
+  const ptBg  = (color,bgPage) => Array.from({length:n},(_,i)=> isProj(i) ? bgPage : color);
+  const ptBor = (color,bgPage) => Array.from({length:n},(_,i)=> isProj(i) ? color : bgPage);
+  const segDash = ctx => isProj(ctx.p1DataIndex) ? [6,4] : undefined;
+
   new Chart(document.getElementById('chart-hist-vend'), {
     type:'line',
     data:{
       labels,
       datasets:[
-        // Linhas principais
-        {label:'Erivan',data:eData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:'#3b82f6',pointBorderColor:'#0d1220',pointBorderWidth:2,borderWidth:3,fill:true,order:1},
-        {label:'Róger',data:rData,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:'#a78bfa',pointBorderColor:'#0d1220',pointBorderWidth:2,borderWidth:3,fill:true,order:2},
-        {label:'Lucas',data:lData,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:'#22c55e',pointBorderColor:'#0d1220',pointBorderWidth:2,borderWidth:3,fill:true,order:3},
+        // Linhas principais (ponto vazado + segmento tracejado para projecao)
+        {label:'Erivan',data:eData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#3b82f6','#0d1220'),pointBorderColor:ptBor('#3b82f6','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:1,segment:{borderDash:segDash}},
+        {label:'Róger',data:rData,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#a78bfa','#0d1220'),pointBorderColor:ptBor('#a78bfa','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:2,segment:{borderDash:segDash}},
+        {label:'Grupo Valente',data:lData,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#22c55e','#0d1220'),pointBorderColor:ptBor('#22c55e','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:3,segment:{borderDash:segDash}},
         // Tendências tracejadas
         {label:'Tendência Erivan',data:tendencia(eData),borderColor:'rgba(59,130,246,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:4},
         {label:'Tendência Róger',data:tendencia(rData),borderColor:'rgba(167,139,250,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:5},
-        {label:'Tendência Lucas',data:tendencia(lData),borderColor:'rgba(34,197,94,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:6},
+        {label:'Tendência GV',data:tendencia(lData),borderColor:'rgba(34,197,94,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:6},
       ]
     },
     options:{
@@ -1159,8 +1171,9 @@ function initT7() {
           callbacks:{
             label: ctx => {
               const isMed = ctx.dataset.label.startsWith('Tendência');
+              const proj = isProj(ctx.dataIndex) && !isMed;
               const prefix = isMed ? ' ↗ Tend. ' + ctx.dataset.label.replace('Tendência ','') + ':' : ' ' + ctx.dataset.label + ':';
-              return prefix + ' ' + fmtK(ctx.raw);
+              return prefix + ' ' + fmtK(ctx.raw) + (proj ? '  (projeção)' : '');
             }
           }
         }
