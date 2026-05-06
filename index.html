@@ -1247,7 +1247,16 @@ function updateDots(idx) {
 
 // ROTAÇÃO
 const SCREENS = ['t1','t2','t3','t4','t5','t6','t7'];
-const DURATION = 30000;
+// Durações por slide proporcionais à densidade (total = 150s = 2min30s)
+const DURATIONS = {
+  t1: 22000,  // Visão Geral
+  t2: 18000,  // Ranking
+  t3: 28000,  // Erivan (denso)
+  t4: 28000,  // Róger (denso)
+  t5: 28000,  // Grupo Valente (denso)
+  t6: 13000,  // Histórico Total
+  t7: 13000   // Histórico por Vendedor
+};
 let current = 0;
 let timerInterval = null;
 let timerStart = null;
@@ -1264,14 +1273,15 @@ function goTo(idx) {
 function startTimer() {
   clearInterval(timerInterval);
   const fill = document.getElementById('timer-fill');
+  const duration = DURATIONS[SCREENS[current]] || 25000;
   fill.style.transition = 'none';
   fill.style.width = '0%';
   timerStart = Date.now();
   setTimeout(() => {
-    fill.style.transition = `width ${DURATION}ms linear`;
+    fill.style.transition = `width ${duration}ms linear`;
     fill.style.width = '100%';
   }, 50);
-  timerInterval = setInterval(() => { goTo(current+1); }, DURATION);
+  timerInterval = setTimeout(() => { goTo(current+1); }, duration);
 }
 
 // INIT
