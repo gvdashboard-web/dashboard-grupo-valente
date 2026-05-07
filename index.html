@@ -28,6 +28,7 @@
     --erivan: #3b82f6;
     --roger: #a78bfa;
     --lucas: #22c55e;
+    --jalena: #fb923c;
   }
 
   html, body {
@@ -214,8 +215,8 @@
   /* TELA 2 — RANKING */
   #t2 .ranking-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 32px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
     flex: 1;
   }
   #t2 .rank-card {
@@ -387,15 +388,15 @@
   .day-mini-val { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--text); }
   .day-mini.hoje .day-mini-val { color: var(--gold); }
 
-  /* TELA 6 — HISTÓRICO */
-  #t6 .hist-grid {
+  /* TELA 7 — HISTÓRICO */
+  #t7 .hist-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
     flex: 1;
     min-height: 0;
   }
-  #t6 .hist-card {
+  #t7 .hist-card {
     background: var(--bg3);
     border: 1px solid var(--border);
     border-radius: 20px;
@@ -406,7 +407,7 @@
     min-height: 0;
     overflow: hidden;
   }
-  #t6 .hist-card-title {
+  #t7 .hist-card-title {
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 2px;
@@ -520,13 +521,13 @@
       </div>
       <div class="kpi-sub">01/05/2026</div>
     </div>
-    <!-- Hoje -->
+    <!-- Ontem -->
     <div class="day-card today">
       <div>
-        <div class="day-label" style="color:var(--gold)">Hoje</div>
+        <div class="day-label" style="color:var(--gold)">Ontem</div>
         <div class="day-value" id="t1-hoje">R$ 6.507</div>
       </div>
-      <div class="kpi-sub">02/05/2026 · atualizado</div>
+      <div class="kpi-sub">02/05/2026</div>
     </div>
   </div>
 </div>
@@ -591,8 +592,23 @@
   <div class="vend-grid" id="t5-grid"></div>
 </div>
 
-<!-- TELA 6: HISTÓRICO TOTAL 12 MESES -->
-<div class="screen" id="t6">
+<!-- TELA 6: JALENA -->
+<div class="screen vend-screen" id="t6">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">GRUPO VALENTE</div>
+      <div class="screen-label">Vendedor · Jalena</div>
+    </div>
+    <div class="header-right">
+      <div class="date-display"></div>
+      <div class="dots"></div>
+    </div>
+  </div>
+  <div class="vend-grid" id="t6-grid"></div>
+</div>
+
+<!-- TELA 7: HISTÓRICO TOTAL 12 MESES -->
+<div class="screen" id="t7">
   <div class="header">
     <div class="header-left">
       <div class="logo">GRUPO VALENTE</div>
@@ -611,8 +627,8 @@
   </div>
 </div>
 
-<!-- TELA 7: HISTÓRICO POR VENDEDOR 12 MESES -->
-<div class="screen" id="t7">
+<!-- TELA 8: HISTÓRICO POR VENDEDOR 12 MESES -->
+<div class="screen" id="t8">
   <div class="header">
     <div class="header-left">
       <div class="logo">GRUPO VALENTE</div>
@@ -623,6 +639,7 @@
         <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--erivan)"></div><span class="legend-label">Erivan</span></div>
         <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--roger)"></div><span class="legend-label">Róger</span></div>
         <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--lucas)"></div><span class="legend-label">Grupo Valente</span></div>
+        <div style="display:flex;gap:8px;align-items:center"><div class="legend-dot" style="background:var(--jalena)"></div><span class="legend-label">Jalena</span></div>
       </div>
       <div class="dots"></div>
     </div>
@@ -639,42 +656,50 @@
 
 <script>
 const D = {
-  hoje: "2026-05-06",
-  dias_corridos_passados: 6,
+  hoje: "2026-05-07",
+  dias_corridos_passados: 7,
   dias_corridos_total: 31,
-  dias_corridos_restantes: 25,
-  total_maio: 10958,
-  ticket_geral: { maio: 684.88, abril: 558.69, var_pct: 22.6 },
+  dias_corridos_restantes: 24,
+  total_maio: 13558,
+  ticket_geral: { maio: 564.92, abril: 558.69, var_pct: 1.1 },
   meta_empresa: 110000,
-  projecao: 56616.33,
-  dias_com_venda: 4,
-  vendas_por_dia: { "01/05": 165, "02/05": 6589, "04/05": 1080, "05/05": 3124 },
+  projecao: 60042.57,
+  dias_com_venda: 5,
+  vendas_por_dia: { "01/05": 165, "02/05": 6589, "04/05": 1080, "05/05": 3124, "06/05": 2600 },
   metas: {
     "Erivan Lima": { global: 60000, abc: 48000 },
     "Róger Silva": { global: 35000, abc: 25000 },
-    "Lucas de Mello Valente": { global: null, abc: null }
+    "Lucas de Mello Valente": { global: null, abc: null },
+    "Jalena": { global: 15000, abc: 10000 }
   },
   vendedores: {
     "Erivan Lima": {
-      fat_maio: 8445, fat_abc: 8295, pedidos: 8, clientes: 8, ticket_medio: 1055.62, ticket_abril: 564.61, ticket_trend: [725.84, 761.80, 564.61],
-      pct_meta: 14.1, projecao: 43632.50, fat_abril: 28795.33, pedidos_abril: 51,
-      por_dia: { "01/05": 165, "02/05": 6589, "04/05": 1080, "05/05": 611 },
-      top_clientes: [["SOBERANO EXCLUSIVE BARBERS",6099],["Procópio Serviço Combinado de Apoio Administrativo Ltda",1080],["Bruno de Souza Pereira",425],["SOUL BARBEIROS AMAZONAS SHOPPING",210],["KSUPPLEMENTS & PERSONAL TRAINNER",186],["Marcilio de Souza Araújo",168],["Dom Manoel",165],["Fabricio de Moraes Marinho",112]],
-      top_produtos: [["LEAVE-IN 240ML - BABOON",2736],["ULTRA HOLD 80G - BABOON",621],["ÓLEO CONEXÃO - 50ML - MACHO-LÂNDIA",432],["BÁLSAMO XXX MINI - MACHO-LÂNDIA",392],["SHAMPOO XXX MINI - MACHO-LÂNDIA",392],["ÓLEO CONEXÃO 230ML PRO - MACHO-LÂNDIA",370],["SHAMPOO LAVATÓRIO 2000ML - SHARK BARBER",350],["CONDICIONADOR LAVATÓRIO 2000ML - SHARK BARBER",350]]
+      fat_maio: 10052, fat_abc: 9702, pedidos: 11, clientes: 11, ticket_medio: 913.82, ticket_abril: 564.61, ticket_trend: [725.84, 761.80, 564.61],
+      pct_meta: 16.8, projecao: 44516.00, fat_abril: 28795.33, pedidos_abril: 51,
+      por_dia: { "01/05": 165, "02/05": 6589, "04/05": 1080, "05/05": 611, "06/05": 1607 },
+      top_clientes: [["SOBERANO EXCLUSIVE BARBERS",6099],["ALEXANDRE JAPA - HOMENS COM ESTILO.",1370],["Procópio Serviço Combinado de Apoio Administrativo Ltda",1080],["Bruno de Souza Pereira",425],["SOUL BARBEIROS AMAZONAS SHOPPING",210],["Manoel José da Costa Pereira",200],["KSUPPLEMENTS & PERSONAL TRAINNER",186],["Marcilio de Souza Araújo",168]],
+      top_produtos: [["LEAVE-IN 240ML - BABOON",2736],["MINI MÁSCARA NUDE (VERDE) - 86G - MACHO-LÂNDIA",715],["ULTRA HOLD 80G - BABOON",621],["LEAVE-IN KAIROS - 140ML -MACHO-LÂNDIA",480],["ÓLEO CONEXÃO - 50ML - MACHO-LÂNDIA",432],["SHAMPOO XXX MINI - MACHO-LÂNDIA",392],["BÁLSAMO XXX MINI - MACHO-LÂNDIA",392],["ÓLEO CONEXÃO 230ML PRO - MACHO-LÂNDIA",370]]
     },
     "Róger Silva": {
-      fat_maio: 717, fat_abc: 399, pedidos: 2, clientes: 2, ticket_medio: 358.5, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98],
-      pct_meta: 2.0, projecao: 3704.50, fat_abril: 20027, pedidos_abril: 47,
-      por_dia: { "05/05": 717 },
-      top_clientes: [["Douglas Lopes Freitas Araujo",399],["Renan de Oliveira Lobo",318]],
-      top_produtos: [["APARADOR DE BARBA PORTÁTIL - TRAVEL SHAVER - WAHL",318],["CREME EFEITO TEIA 80G - FOX",156],["PASTA PREMIUM 80G - FOX",143],["PASTA BLACK FOX FOR MEN 80G - FOX",100]]
+      fat_maio: 890, fat_abc: 572, pedidos: 3, clientes: 3, ticket_medio: 296.67, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98],
+      pct_meta: 2.5, projecao: 3941.43, fat_abril: 20027, pedidos_abril: 47,
+      por_dia: { "05/05": 717, "06/05": 173 },
+      top_clientes: [["Douglas Lopes Freitas Araujo",399],["Renan de Oliveira Lobo",318],["(V) Fábio Júnior Cardoso de Araújo (V)",173]],
+      top_produtos: [["APARADOR DE BARBA PORTÁTIL - TRAVEL SHAVER - WAHL",318],["CREME EFEITO TEIA 80G - FOX",156],["PASTA PREMIUM 80G - FOX",143],["PASTA BLACK FOX FOR MEN 80G - FOX",100],["GEL GRAPE - 240G - SHARK BARBER",65],["PASTA ORANGE 120G - FOX",64],["CREME EFEITO TEIA 150G - FOX",44]]
     },
     "Lucas de Mello Valente": {
-      fat_maio: 1796, fat_abc: 1292, pedidos: 6, clientes: 5, ticket_medio: 299.33, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98],
-      pct_meta: 0.0, projecao: 9279.33, fat_abril: 29937.9, pedidos_abril: 49,
-      por_dia: { "05/05": 1796 },
-      top_clientes: [["Barbearia Nº 1 Dom Pedro",561],["Marcelo Vitor Costa da Silva",477],["Marley Jezine (ESTÉTICA) - Pele Bela Manaus",360],["José Galdino da Silva Neto",212],["Joelesson Gomes de Souza",186]],
-      top_produtos: [["MANTA TECHNATURE 30X38 PLUS G - ESTÉTICA - GVE",360],["LEAVE-IN 240ML - BABOON",228],["SKIN PROTECTION - PÓS-BARBA EFERVESCENTE - BABOON",220],["SHAVE CREAM 280 ML - BABOON",162],["OLEO CARREADOR JOJOBA 50ML - DON ALCIDES",130],["GOLA HIGIENICA DESCARTAVEL DE PESCOCO PARA USO EM BARBEARIA - FOX",120],["BÁLSAMO XXX MINI - MACHO-LÂNDIA",112],["SHAMPOO XXX MINI - MACHO-LÂNDIA",112]]
+      fat_maio: 1976, fat_abc: 1292, pedidos: 7, clientes: 6, ticket_medio: 282.29, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98],
+      pct_meta: 0.0, projecao: 8750.86, fat_abril: 29937.9, pedidos_abril: 49,
+      por_dia: { "05/05": 1796, "06/05": 180 },
+      top_clientes: [["Barbearia Nº 1 Dom Pedro",561],["Marcelo Vitor Costa da Silva",477],["Marley Jezine (ESTÉTICA) - Pele Bela Manaus",360],["José Galdino da Silva Neto",212],["Joelesson Gomes de Souza",186],["Lucas Freitas da Costa",180]],
+      top_produtos: [["MANTA TECHNATURE 30X38 PLUS G - ESTÉTICA - GVE",360],["LEAVE-IN 240ML - BABOON",228],["SKIN PROTECTION - PÓS-BARBA EFERVESCENTE - BABOON",220],["TESOURA 3270N - FIO NAVALHA - UMI",180],["SHAVE CREAM 280 ML - BABOON",162],["OLEO CARREADOR JOJOBA 50ML - DON ALCIDES",130],["GOLA HIGIENICA DESCARTAVEL DE PESCOCO PARA USO EM BARBEARIA - FOX",120],["BÁLSAMO XXX MINI - MACHO-LÂNDIA",112]]
+    },
+    "Jalena": {
+      fat_maio: 640, fat_abc: 322, pedidos: 3, clientes: 3, ticket_medio: 213.33, ticket_abril: 0, ticket_trend: [0,0,0],
+      pct_meta: 4.3, projecao: 2834.29, fat_abril: 0, pedidos_abril: 0,
+      por_dia: { "06/05": 640 },
+      top_clientes: [["Jonatan Tenazor Velasquez",253],["Christopher Lucas da Silva Dias",228],["Jhonatas Alves Belchior Mathias",159]],
+      top_produtos: [["APARADOR DE BARBA PORTÁTIL - TRAVEL SHAVER - WAHL",318],["ULTRA HOLD 80G - BABOON",69],["CREME EFEITO TEIA 80G - FOX",60],["GOLA HIGIENICA DESCARTAVEL DE PESCOCO PARA USO EM BARBEARIA - FOX",60],["PASTA WAX EFEITO SECO 80G - FOX",55],["CERA HAIR CARAMELO 80G - FOX",50],["SACHÊ MÁSCARA BLACK 8G - FOX",28]]
     }
   },
   historico_total: [
@@ -685,7 +710,7 @@ const D = {
     {mes:"2025-12",vlr_bruto:81507.30},{mes:"2026-01",vlr_bruto:87915.83},
     {mes:"2026-02",vlr_bruto:61461.15},{mes:"2026-03",vlr_bruto:114319.03},
     {mes:"2026-04",vlr_bruto:83244.23},
-    {mes:"2026-05",vlr_bruto:56616.33,projecao:true}
+    {mes:"2026-05",vlr_bruto:60042.57,projecao:true}
   ],
   historico_vendedor: {
     "Erivan Lima": [
@@ -696,7 +721,7 @@ const D = {
       {mes:"2025-12",vlr_bruto:37011.84},{mes:"2026-01",vlr_bruto:47392.16},
       {mes:"2026-02",vlr_bruto:38469.34},{mes:"2026-03",vlr_bruto:55611.32},
       {mes:"2026-04",vlr_bruto:28795.33},
-      {mes:"2026-05",vlr_bruto:43632.50,projecao:true}
+      {mes:"2026-05",vlr_bruto:44516.00,projecao:true}
     ],
     "Róger Silva": [
       {mes:"2025-04",vlr_bruto:25307.37},{mes:"2025-05",vlr_bruto:35742.51},
@@ -706,7 +731,7 @@ const D = {
       {mes:"2025-12",vlr_bruto:23816.85},{mes:"2026-01",vlr_bruto:21881},
       {mes:"2026-02",vlr_bruto:15136.98},{mes:"2026-03",vlr_bruto:24859},
       {mes:"2026-04",vlr_bruto:20027},
-      {mes:"2026-05",vlr_bruto:3704.50,projecao:true}
+      {mes:"2026-05",vlr_bruto:3941.43,projecao:true}
     ],
     "Lucas de Mello Valente": [
       {mes:"2025-04",vlr_bruto:16243.82},{mes:"2025-05",vlr_bruto:26171.90},
@@ -716,7 +741,17 @@ const D = {
       {mes:"2025-12",vlr_bruto:20229.61},{mes:"2026-01",vlr_bruto:18642.67},
       {mes:"2026-02",vlr_bruto:7854.83},{mes:"2026-03",vlr_bruto:33848.71},
       {mes:"2026-04",vlr_bruto:29937.90},
-      {mes:"2026-05",vlr_bruto:9279.33,projecao:true}
+      {mes:"2026-05",vlr_bruto:8750.86,projecao:true}
+    ],
+    "Jalena": [
+      {mes:"2025-04",vlr_bruto:0},{mes:"2025-05",vlr_bruto:0},
+      {mes:"2025-06",vlr_bruto:0},{mes:"2025-07",vlr_bruto:0},
+      {mes:"2025-08",vlr_bruto:0},{mes:"2025-09",vlr_bruto:0},
+      {mes:"2025-10",vlr_bruto:0},{mes:"2025-11",vlr_bruto:0},
+      {mes:"2025-12",vlr_bruto:0},{mes:"2026-01",vlr_bruto:0},
+      {mes:"2026-02",vlr_bruto:0},{mes:"2026-03",vlr_bruto:0},
+      {mes:"2026-04",vlr_bruto:0},
+      {mes:"2026-05",vlr_bruto:2834.29,projecao:true}
     ]
   },
   insights: {
@@ -750,8 +785,12 @@ const D = {
         {nome:"V/ BARBEARIA JC", valor:1215},
         {nome:"Taisson da Cruz Carneiro", valor:1167}
       ],
-      novos: [],
-      concentracao: null,
+      novos: [
+        {nome:"Jonatan Tenazor Velasquez", valor:253},
+        {nome:"Christopher Lucas da Silva Dias", valor:228},
+        {nome:"Jhonatas Alves Belchior Mathias", valor:159}
+      ],
+      concentracao: {nome:"Jonatan Tenazor Velasquez", pct:39.5},
       clientes_abril: 42,
       clientes_maio: 0
     },
@@ -764,9 +803,25 @@ const D = {
         {nome:"Don Barzini Barbearia", valor:4715},
         {nome:"Leonis Alcantarino Deodato", valor:3322.9}
       ],
-      novos: [],
-      concentracao: null,
+      novos: [
+        {nome:"Jonatan Tenazor Velasquez", valor:253},
+        {nome:"Christopher Lucas da Silva Dias", valor:228},
+        {nome:"Jhonatas Alves Belchior Mathias", valor:159}
+      ],
+      concentracao: {nome:"Jonatan Tenazor Velasquez", pct:39.5},
       clientes_abril: 28,
+      clientes_maio: 0
+    },
+    "Jalena": {
+      queda: [],
+      silencio: [],
+      novos: [
+        {nome:"Jonatan Tenazor Velasquez", valor:253},
+        {nome:"Christopher Lucas da Silva Dias", valor:228},
+        {nome:"Jhonatas Alves Belchior Mathias", valor:159}
+      ],
+      concentracao: {nome:"Jonatan Tenazor Velasquez", pct:39.5},
+      clientes_abril: 0,
       clientes_maio: 0
     }
   }
@@ -775,8 +830,8 @@ const D = {
 const fmt = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 const fmtK = v => v >= 1000 ? 'R$ ' + (v/1000).toFixed(1).replace('.',',') + 'K' : fmt(v);
 const mesLabel = m => {const [y,mo]=m.split('-');const ns=['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];return ns[+mo]+'/'+y.slice(2)};
-const vColors = {'Erivan Lima':'#3b82f6','Róger Silva':'#a78bfa','Lucas de Mello Valente':'#22c55e'};
-const vShort = {'Erivan Lima':'Erivan','Róger Silva':'Róger','Lucas de Mello Valente':'Grupo Valente'};
+const vColors = {'Erivan Lima':'#3b82f6','Róger Silva':'#a78bfa','Lucas de Mello Valente':'#22c55e','Jalena':'#fb923c'};
+const vShort = {'Erivan Lima':'Erivan','Róger Silva':'Róger','Lucas de Mello Valente':'Grupo Valente','Jalena':'Jalena'};
 
 function initT1() {
   const pct = D.total_maio / D.meta_empresa * 100;
@@ -804,7 +859,7 @@ function initT1() {
   if (ultimo) {
     document.getElementById('t1-hoje').textContent = fmtK(D.vendas_por_dia[ultimo]);
     const lhoje = document.querySelector('.day-card.today .kpi-sub');
-    if (lhoje) lhoje.textContent = ultimo + '/2026 · atualizado';
+    if (lhoje) lhoje.textContent = ultimo + '/2026';
   }
   if (penultimo) {
     document.getElementById('t1-d2').textContent = fmtK(D.vendas_por_dia[penultimo]);
@@ -838,7 +893,8 @@ function initT2() {
   const vendedores = [
     {nome:'Erivan Lima', cor:'var(--erivan)'},
     {nome:'Róger Silva', cor:'var(--roger)'},
-    {nome:'Lucas de Mello Valente', cor:'var(--lucas)'}
+    {nome:'Lucas de Mello Valente', cor:'var(--lucas)'},
+    {nome:'Jalena', cor:'var(--jalena)'}
   ];
   const sorted = vendedores.map(v => ({
     ...v,
@@ -1173,6 +1229,7 @@ function initT7() {
   const eData = getHist('Erivan Lima');
   const rData = getHist('Róger Silva');
   const lData = getHist('Lucas de Mello Valente');
+  const jData = getHist('Jalena');
 
   // Indices que representam projecao (mes atual ainda em curso)
   const projIdx = new Set(D.historico_total.map((h,i) => h.projecao ? i : -1).filter(i => i>=0));
@@ -1190,10 +1247,12 @@ function initT7() {
         {label:'Erivan',data:eData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#3b82f6','#0d1220'),pointBorderColor:ptBor('#3b82f6','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:1,segment:{borderDash:segDash}},
         {label:'Róger',data:rData,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#a78bfa','#0d1220'),pointBorderColor:ptBor('#a78bfa','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:2,segment:{borderDash:segDash}},
         {label:'Grupo Valente',data:lData,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#22c55e','#0d1220'),pointBorderColor:ptBor('#22c55e','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:3,segment:{borderDash:segDash}},
+        {label:'Jalena',data:jData,borderColor:'#fb923c',backgroundColor:'rgba(251,146,60,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#fb923c','#0d1220'),pointBorderColor:ptBor('#fb923c','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:4,segment:{borderDash:segDash}},
         // Tendências tracejadas
-        {label:'Tendência Erivan',data:tendencia(eData),borderColor:'rgba(59,130,246,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:4},
-        {label:'Tendência Róger',data:tendencia(rData),borderColor:'rgba(167,139,250,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:5},
-        {label:'Tendência GV',data:tendencia(lData),borderColor:'rgba(34,197,94,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:6},
+        {label:'Tendência Erivan',data:tendencia(eData),borderColor:'rgba(59,130,246,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:5},
+        {label:'Tendência Róger',data:tendencia(rData),borderColor:'rgba(167,139,250,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:6},
+        {label:'Tendência GV',data:tendencia(lData),borderColor:'rgba(34,197,94,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:7},
+        {label:'Tendência Jalena',data:tendencia(jData),borderColor:'rgba(251,146,60,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:8},
       ]
     },
     options:{
@@ -1225,7 +1284,7 @@ function initT7() {
 
 // DOTS
 function buildDots() {
-  const total = 7;
+  const total = SCREENS.length;
   document.querySelectorAll('.dots').forEach(container => {
     container.innerHTML = '';
     for(let i=0;i<total;i++){
@@ -1246,16 +1305,17 @@ function updateDots(idx) {
 }
 
 // ROTAÇÃO
-const SCREENS = ['t1','t2','t3','t4','t5','t6','t7'];
-// Durações por slide proporcionais à densidade (total = 150s = 2min30s)
+const SCREENS = ['t1','t2','t3','t4','t5','t6','t7','t8'];
+// Durações por slide proporcionais à densidade (total ~ 178s = 2min58s)
 const DURATIONS = {
   t1: 22000,  // Visão Geral
-  t2: 18000,  // Ranking
-  t3: 28000,  // Erivan (denso)
-  t4: 28000,  // Róger (denso)
-  t5: 28000,  // Grupo Valente (denso)
-  t6: 13000,  // Histórico Total
-  t7: 13000   // Histórico por Vendedor
+  t2: 22000,  // Ranking (4 vendedores agora)
+  t3: 28000,  // Erivan
+  t4: 28000,  // Róger
+  t5: 28000,  // Grupo Valente
+  t6: 24000,  // Jalena (menos denso pq dados parciais)
+  t7: 13000,  // Histórico Total
+  t8: 13000   // Histórico por Vendedor
 };
 let current = 0;
 let timerInterval = null;
@@ -1292,6 +1352,7 @@ initT2();
 buildVendedorGrid('t3-grid','Erivan Lima','#3b82f6');
 buildVendedorGrid('t4-grid','Róger Silva','#a78bfa');
 buildVendedorGrid('t5-grid','Lucas de Mello Valente','#22c55e');
+buildVendedorGrid('t6-grid','Jalena','#fb923c');
 setTimeout(() => { initT6(); initT7(); }, 100);
 startTimer();
 
