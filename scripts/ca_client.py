@@ -96,14 +96,17 @@ class ContaAzulClient:
 
         self.access_token = tokens['access_token']
         cred_set('CA_ACCESS_TOKEN', 'contaazul-access-token', self.access_token)
-        # Alguns providers tambem retornam novo refresh_token
+        # Conta Azul rotaciona o refresh_token a cada uso — precisamos persistir o novo
         if 'refresh_token' in tokens and tokens['refresh_token'] != self.refresh_token:
             self.refresh_token = tokens['refresh_token']
             cred_set('CA_REFRESH_TOKEN', 'contaazul-refresh-token', self.refresh_token)
             if IS_CI:
-                # Em CI nao da pra atualizar secret automaticamente — avisa
-                print(f'AVISO: novo refresh_token recebido. Atualize o secret CA_REFRESH_TOKEN:', file=sys.stderr)
-                print(f'NEW_REFRESH_TOKEN={self.refresh_token}', file=sys.stderr)
+                # Em CI: escreve no GITHUB_ENV pra o proximo step poder atualizar o secret
+                github_env = os.environ.get('GITHUB_ENV')
+                if github_env:
+                    with open(github_env, 'a') as f:
+                        f.write(f'NEW_REFRESH_TOKEN={self.refresh_token}\n')
+                    print('[ca_client] Novo refresh_token escrito em GITHUB_ENV', file=sys.stderr)
         return self.access_token
 
     def _request(self, method, path, params=None, body=None, _retry=True):
