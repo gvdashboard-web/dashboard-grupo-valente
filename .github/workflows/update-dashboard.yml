@@ -2,17 +2,13 @@ name: Atualizar Dashboard Diariamente
 
 on:
   schedule:
-    # ATENCAO: GitHub Actions cron sempre roda em UTC.
-    # Manaus é UTC-4 (sem horario de verão).
-    # Usamos minutos quebrados (:07 e :37) pra evitar a fila de pico
-    # do GitHub que sempre acumula em :00 e :30.
-    #
-    # 1) De hora em hora, das 08-10h e 17-23h Manaus (fora do pico)
-    # = UTC 12-14, 21-23, 00-03 (do dia seguinte)
+    # Schedule do GitHub é unreliable (bem documentado) — mantemos como fallback.
     - cron: '7 0-3,12-14,21-23 * * *'
-    # 2) A cada 30 min, das 11-16h Manaus (horario de pico)
-    # = UTC 15-20
     - cron: '7,37 15-20 * * *'
+  # Trigger externo via cron-job.org (mais confiavel que schedule do GH).
+  # Disparado via: POST /repos/.../dispatches com {"event_type":"refresh-dashboard"}
+  repository_dispatch:
+    types: [refresh-dashboard]
   workflow_dispatch:
 
 permissions:
