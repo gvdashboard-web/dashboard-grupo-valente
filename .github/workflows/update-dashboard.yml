@@ -1,10 +1,13 @@
 name: Atualizar Dashboard Diariamente
 
 on:
-  # A cada hora, das 08:00 às 22:00 (horário de Manaus, UTC-4)
-  # = 12-23h UTC + 00-02h UTC do dia seguinte
   schedule:
-    - cron: '0 0-2,12-23 * * *'
+    # 1) De hora em hora, das 08-10h e 17-23h Manaus (fora do horario de pico)
+    # = UTC 12-14, 21-23, 00-03 (do dia seguinte)
+    - cron: '0 0-3,12-14,21-23 * * *'
+    # 2) A cada 30 minutos, das 11-16h Manaus (horario de pico)
+    # = UTC 15-20
+    - cron: '0,30 15-20 * * *'
   workflow_dispatch:
 
 permissions:
