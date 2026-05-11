@@ -160,6 +160,7 @@ def aggregate(items):
         'total':0.0,'abc':0.0,'pedidos':set(),'clientes':set(),'itens':0,
         'top_clientes':defaultdict(float),'top_produtos':defaultdict(float),
         'por_dia':defaultdict(float),
+        'vendas_acumuladas':{},  # {sale_id: {data, cliente, valor}}
     })
 
     for it in items:
@@ -176,6 +177,13 @@ def aggregate(items):
         pv['top_clientes'][it['cliente']] += it['valor']
         pv['top_produtos'][it['produto']] += it['valor']
         pv['por_dia'][d] += it['valor']
+        # Acumula vendas individuais por sale_id
+        sale_id = it['sale']
+        if sale_id not in pv['vendas_acumuladas']:
+            pv['vendas_acumuladas'][sale_id] = {
+                'data': it['data'], 'cliente': it['cliente'], 'valor': 0
+            }
+        pv['vendas_acumuladas'][sale_id]['valor'] += it['valor']
         if it['categoria'] in ABC_CATS:
             pv['abc'] += it['valor']
 
@@ -213,6 +221,17 @@ def aggregate(items):
 
     for v, d in por_v.items():
         n_ped = len(d['pedidos'])
+        # Ultimas 5 vendas ordenadas por data desc
+        vendas_ord = sorted(d['vendas_acumuladas'].values(),
+                            key=lambda x: x['data'], reverse=True)[:5]
+        ultimas = [
+            {
+                'data': u['data'].strftime('%d/%m'),
+                'cliente': u['cliente'],
+                'valor': round(u['valor'], 2)
+            }
+            for u in vendas_ord
+        ]
         out['vendedores'][v] = {
             'fat': round(d['total'], 2),
             'fat_abc': round(d['abc'], 2),
@@ -225,6 +244,7 @@ def aggregate(items):
             'top_produtos': sorted([[k,round(v,2)] for k,v in d['top_produtos'].items()],
                                    key=lambda x:-x[1])[:8],
             'por_dia': {k:round(v,2) for k,v in sorted(d['por_dia'].items())},
+            'ultimas_vendas': ultimas,
         }
 
     return out
@@ -398,6 +418,17 @@ def patch_vendedor(p, nome, vd, meta_global, dias_total=31, dias_passados=1):
     por_dia = vd.get('por_dia', {})
     por_dia_js = js_obj_dia_valor(por_dia) if por_dia else '{}'
 
+    # Ultimas vendas — array de objetos {data, cliente, valor}
+    ultimas = vd.get('ultimas_vendas', [])
+    def esc(s):
+        return s.replace('\\', '\\\\').replace('"', '\\"')
+    ult_parts = []
+    for u in ultimas:
+        ult_parts.append(
+            f'{{data:"{u["data"]}",cliente:"{esc(u["cliente"])}",valor:{u["valor"]:g}}}'
+        )
+    ultimas_js = '[' + ','.join(ult_parts) + ']'
+
     new_block = (
         f'"{nome}": {{\n'
         f'      fat_maio: {vd["fat"]:g}, fat_abc: {vd["fat_abc"]:g}, '
@@ -406,6 +437,7 @@ def patch_vendedor(p, nome, vd, meta_global, dias_total=31, dias_passados=1):
         f'      pct_meta: {pct_meta:.1f}, projecao: {proj_v:.2f}, '
         f'fat_abril: {fat_abril}, pedidos_abril: {pedidos_abril},\n'
         f'      por_dia: {por_dia_js},\n'
+        f'      ultimas_vendas: {ultimas_js},\n'
         f'      top_clientes: {js_array_of_pairs(vd["top_clientes"])},\n'
         f'      top_produtos: {js_array_of_pairs(vd["top_produtos"])}\n'
         f'    }}'
