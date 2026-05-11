@@ -27,9 +27,9 @@
     --red: #ef4444;
     --purple: #a78bfa;
     --erivan: #3b82f6;
-    --roger: #a78bfa;
+    --roger: #fb923c;
     --lucas: #22c55e;
-    --jalena: #fb923c;
+    --jalena: #ec4899;
   }
 
   html, body {
@@ -151,8 +151,8 @@
   /* TELA 1 — VISÃO GERAL */
   #t1 .main-grid {
     display: grid;
-    grid-template-columns: 2.4fr 1fr 1fr 1fr;
-    gap: 24px;
+    grid-template-columns: 2.4fr 1fr 1fr 1fr 1fr;
+    gap: 20px;
     flex: 1;
   }
   #t1 .unified-kpi {
@@ -176,6 +176,23 @@
   }
   #t1 .unified-kpi .pct-side {
     text-align: center;
+  }
+  #t1 .unified-kpi .kpi-side {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+  }
+  #t1 .unified-kpi .kpi-mini-stack {
+    text-align: right;
+  }
+  #t1 .unified-kpi .kpi-mini-big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    line-height: 1;
+    color: var(--text);
+    margin-top: 6px;
+    letter-spacing: 1px;
   }
   /* Barra de progresso prominente — fechamento da meta */
   #t1 .meta-bar-wrap {
@@ -592,23 +609,28 @@
     </div>
   </div>
   <div class="main-grid">
-    <!-- Card unificado: Faturamento + Meta + Projeção -->
+    <!-- Card unificado: Faturamento + KPIs + Barra de meta + Projeção -->
     <div class="fat-card unified-kpi">
       <div class="kpi-row">
         <!-- Lado esquerdo: Faturamento -->
         <div>
           <div class="kpi-label">Faturamento Maio</div>
-          <div class="fat-value" id="t1-fat">R$ 6.837</div>
-          <div class="meta-info" id="t1-dias" style="margin-top:6px;">6 de 31 dias corridos</div>
+          <div class="fat-value" id="t1-fat">R$ 0</div>
+          <div class="meta-info" id="t1-dias" style="margin-top:6px;">— de — dias corridos</div>
         </div>
-        <!-- Lado direito: % Meta -->
-        <div class="pct-side">
-          <div class="kpi-label">Meta Atingida</div>
-          <div class="pct-big" id="t1-pct" style="color:var(--gold)">6,2%</div>
-          <div class="kpi-sub" id="t1-dias-rest"></div>
+        <!-- Lado direito: KPIs secundarios -->
+        <div class="kpi-side">
+          <div class="kpi-mini-stack">
+            <div class="kpi-mini-label">Pedidos</div>
+            <div class="kpi-mini-big" id="t1-pedidos">0</div>
+          </div>
+          <div class="kpi-mini-stack">
+            <div class="kpi-mini-label">Clientes</div>
+            <div class="kpi-mini-big" id="t1-clientes">0</div>
+          </div>
         </div>
       </div>
-      <!-- Barra prominente: progresso para fechamento da meta -->
+      <!-- Barra prominente: progresso pra fechamento da meta (UNICA mencao a meta) -->
       <div class="meta-bar-wrap">
         <div class="meta-bar-track">
           <div class="meta-bar-fill" id="t1-bar" style="width:0%"></div>
@@ -619,11 +641,10 @@
           <span class="right" id="t1-meta">Meta: R$ 110.000</span>
         </div>
       </div>
-      <!-- Linha inferior: Projeção (horizontal) -->
+      <!-- Linha inferior: Projeção (sem comparar com meta) -->
       <div class="proj-box proj-row">
         <div class="kpi-label proj-label">Projeção de Fechamento</div>
         <div class="proj-value" id="t1-proj"></div>
-        <div class="kpi-sub" id="t1-proj-sub"></div>
       </div>
     </div>
     <!-- Ticket médio -->
@@ -632,17 +653,25 @@
     <div class="day-card">
       <div>
         <div class="day-label">Anteontem</div>
-        <div class="day-value" id="t1-d2">R$ 330</div>
+        <div class="day-value" id="t1-d2">R$ 0</div>
       </div>
-      <div class="kpi-sub">01/05/2026</div>
+      <div class="kpi-sub" id="t1-d2-data">—</div>
     </div>
     <!-- Ontem -->
+    <div class="day-card">
+      <div>
+        <div class="day-label">Ontem</div>
+        <div class="day-value" id="t1-d1">R$ 0</div>
+      </div>
+      <div class="kpi-sub" id="t1-d1-data">—</div>
+    </div>
+    <!-- Hoje -->
     <div class="day-card today">
       <div>
-        <div class="day-label" style="color:var(--gold)">Ontem</div>
-        <div class="day-value" id="t1-hoje">R$ 6.507</div>
+        <div class="day-label" style="color:var(--gold)">Hoje</div>
+        <div class="day-value" id="t1-hoje">R$ 0</div>
       </div>
-      <div class="kpi-sub">02/05/2026</div>
+      <div class="kpi-sub" id="t1-hoje-data">—</div>
     </div>
   </div>
 </div>
@@ -783,17 +812,17 @@
 
 <script>
 const D = {
-  atualizado_em: "11/05 19:15",
-  hoje: "2026-05-12",
-  dias_corridos_passados: 11,
+  atualizado_em: "ainda nao",
+  hoje: "2026-05-10",
+  dias_corridos_passados: 9,
   dias_corridos_total: 31,
-  dias_corridos_restantes: 20,
-  total_maio: 28524,
-  ticket_geral: { maio: 518.62, abril: 558.69, var_pct: -7.2 },
+  dias_corridos_restantes: 22,
+  total_maio: 24351,
+  ticket_geral: { maio: 496.96, abril: 558.69, var_pct: -11.0 },
   meta_empresa: 110000,
-  projecao: 80385.79,
+  projecao: 83875.63,
   dias_com_venda: 8,
-  vendas_por_dia: { "02/05": 6589, "04/05": 1080, "05/05": 3124, "06/05": 2647, "07/05": 4625, "08/05": 6094.99, "09/05": 366, "11/05": 3998 },
+  vendas_por_dia: { "01/05": 165, "02/05": 6589, "04/05": 1080, "05/05": 3124, "06/05": 2647, "07/05": 4625, "08/05": 5754.99, "09/05": 366 },
   metas: {
     "Erivan Lima": { global: 60000, abc: 48000 },
     "Róger Silva": { global: 35000, abc: 25000 },
@@ -802,30 +831,34 @@ const D = {
   },
   vendedores: {
     "Erivan Lima": {
-      fat_maio: 15475, fat_abc: 14315, pedidos: 22, clientes: 22, ticket_medio: 703.41, ticket_abril: 564.61, ticket_trend: [725.84, 761.80, 564.61],
-      pct_meta: 25.8, projecao: 43611.36, fat_abril: 28795.33, pedidos_abril: 51,
-      por_dia: { "02/05": 6589, "04/05": 1080, "05/05": 611, "06/05": 1607, "07/05": 3145, "08/05": 1071, "09/05": 366, "11/05": 1006 },
-      top_clientes: [["SOBERANO EXCLUSIVE BARBERS",6099],["ALEXANDRE JAPA - HOMENS COM ESTILO.",1370],["Procópio Serviço Combinado de Apoio Administrativo Ltda",1080],["Waldy Barros Pereira",836],["Gustavo Lobo Duarte",789],["Barbearia Soul",690],["Giliarde Caldeira Duarte",616],["CASTELLARI BARBEARIA",551]],
-      top_produtos: [["LEAVE-IN 240ML - BABOON",2736],["MINI MÁSCARA NUDE (VERDE) - 86G - MACHO-LÂNDIA",880],["TOALHA BARBEARIA  30x45 cm -500 UN. - HIGIMAXX",810],["ÓLEO CONEXÃO - 50ML - MACHO-LÂNDIA",756],["JOHNNIE LIZZ - 1L - MACHO-LÂNDIA",750],["ULTRA HOLD 80G - BABOON",621],["ÓLEO CONEXÃO 230ML PRO - MACHO-LÂNDIA",555],["LEAVE-IN KAIROS - 140ML -MACHO-LÂNDIA",480]]
+      fat_maio: 14634, fat_abc: 13474, pedidos: 21, clientes: 21, ticket_medio: 696.86, ticket_abril: 564.61, ticket_trend: [725.84, 761.80, 564.61],
+      pct_meta: 24.4, projecao: 50406.00, fat_abril: 28795.33, pedidos_abril: 51,
+      por_dia: { "01/05": 165, "02/05": 6589, "04/05": 1080, "05/05": 611, "06/05": 1607, "07/05": 3145, "08/05": 1071, "09/05": 366 },
+      ultimas_vendas: [{data:"09/05",cliente:"Barbearia Soul",valor:366},{data:"08/05",cliente:"Gustavo Lobo Duarte",valor:789},{data:"07/05",cliente:"ALEXANDRE JAPA",valor:1370},{data:"07/05",cliente:"Antonizete Delmiro",valor:500},{data:"06/05",cliente:"CASTELLARI BARBEARIA",valor:551}],
+      top_clientes: [["SOBERANO EXCLUSIVE BARBERS",6099],["ALEXANDRE JAPA - HOMENS COM ESTILO.",1370],["Procópio Serviço Combinado de Apoio Administrativo Ltda",1080],["Gustavo Lobo Duarte",789],["Barbearia Soul",690],["Giliarde Caldeira Duarte",616],["CASTELLARI BARBEARIA",551],["Antonizete Ferreira Delmiro",500]],
+      top_produtos: [["LEAVE-IN 240ML - BABOON",2736],["TOALHA BARBEARIA  30x45 cm -500 UN. - HIGIMAXX",810],["JOHNNIE LIZZ - 1L - MACHO-LÂNDIA",750],["MINI MÁSCARA NUDE (VERDE) - 86G - MACHO-LÂNDIA",715],["ULTRA HOLD 80G - BABOON",621],["ÓLEO CONEXÃO 230ML PRO - MACHO-LÂNDIA",555],["LEAVE-IN KAIROS - 140ML -MACHO-LÂNDIA",480],["ÓLEO CONEXÃO - 50ML - MACHO-LÂNDIA",432]]
     },
     "Róger Silva": {
-      fat_maio: 3700, fat_abc: 2878, pedidos: 10, clientes: 10, ticket_medio: 370, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98],
-      pct_meta: 10.6, projecao: 10427.27, fat_abril: 20027, pedidos_abril: 47,
-      por_dia: { "05/05": 717, "06/05": 173, "07/05": 1068, "08/05": 250, "11/05": 1492 },
-      top_clientes: [["Romário Aguiar Ferreira",705],["Ronald Franklin Costa Silva",616],["(V) Geysivan Ferreira de Assunção (V)",422],["Gabriel Silva Costa",414],["Douglas Lopes Freitas Araujo",399],["Kelvin Josue Quintero Gamez",363],["Renan de Oliveira Lobo",318],["(V)Flavio da Silva Moreira(V)",250]],
-      top_produtos: [["APARADOR DE BARBA PORTÁTIL - TRAVEL SHAVER - WAHL",477],["JOHNNIE LIZZ - 1L - MACHO-LÂNDIA",250],["CREME EFEITO TEIA 80G - FOX",240],["MICAIL TONIFICANTE 30 ML - SHARK BARBER",210],["TESOURA  FIO NAVALHA 802-60N - UMI",200],["GROOMING - 240ML - BABOON",158],["PASTA PREMIUM 80G - FOX",143],["PASTA ORANGE 120G - FOX",139]]
+      fat_maio: 2208, fat_abc: 1835, pedidos: 6, clientes: 6, ticket_medio: 368, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98],
+      pct_meta: 6.3, projecao: 7605.33, fat_abril: 20027, pedidos_abril: 47,
+      por_dia: { "05/05": 717, "06/05": 173, "07/05": 1068, "08/05": 250 },
+      ultimas_vendas: [{data:"08/05",cliente:"(V)Flavio da Silva Moreira",valor:250},{data:"07/05",cliente:"Romário Aguiar Ferreira",valor:705},{data:"07/05",cliente:"Kelvin Josue Gamez",valor:363},{data:"06/05",cliente:"(V) Fábio Júnior Cardoso",valor:173},{data:"05/05",cliente:"Douglas Lopes Araujo",valor:399}],
+      top_clientes: [["Romário Aguiar Ferreira",705],["Douglas Lopes Freitas Araujo",399],["Kelvin Josue Quintero Gamez",363],["Renan de Oliveira Lobo",318],["(V)Flavio da Silva Moreira(V)",250],["(V) Fábio Júnior Cardoso de Araújo (V)",173]],
+      top_produtos: [["APARADOR DE BARBA PORTÁTIL - TRAVEL SHAVER - WAHL",318],["JOHNNIE LIZZ - 1L - MACHO-LÂNDIA",250],["GROOMING - 240ML - BABOON",158],["CREME EFEITO TEIA 80G - FOX",156],["PASTA PREMIUM 80G - FOX",143],["PASTA ORANGE 120G - FOX",139],["TÔNICO CAPILAR 15% - PLAY - 120ml - BIG BARBER",135],["PASTA BLACK FOX FOR MEN 80G - FOX",100]]
     },
     "Lucas de Mello Valente": {
-      fat_maio: 5422, fat_abc: 2719, pedidos: 12, clientes: 10, ticket_medio: 451.83, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98],
-      pct_meta: 0.0, projecao: 15280.18, fat_abril: 29937.9, pedidos_abril: 49,
-      por_dia: { "05/05": 1796, "06/05": 227, "08/05": 1899, "11/05": 1500 },
-      top_clientes: [["Rivarol Ramos da Silva (ESTÉTICA)",1500],["Barbearia Nº 1 Parque 10",967],["João Marcos Souza da Silva",780],["Barbearia Nº 1 Dom Pedro",561],["Marcelo Vitor Costa da Silva",477],["Marley Jezine (ESTÉTICA) - Pele Bela Manaus",360],["Lucas Freitas da Costa",227],["José Galdino da Silva Neto",212]],
-      top_produtos: [["MANTA TECHNATURE 30X38 PLUS G - ESTÉTICA - GVE",1860],["TOALHA BARBEARIA  30x45 cm -500 UN. - HIGIMAXX",510],["MATTE CLAY 80G - BABOON",414],["GOLA HIGIENICA DESCARTAVEL DE PESCOCO PARA USO EM BARBEARIA - FOX",240],["PASTA TEIA 130G - SHARK BARBER",240],["LEAVE-IN 240ML - BABOON",228],["SKIN PROTECTION - PÓS-BARBA EFERVESCENTE - BABOON",220],["BALM TIME LIZ - 140ML - MACHO-LÂNDIA",204]]
+      fat_maio: 3582, fat_abc: 2649, pedidos: 11, clientes: 9, ticket_medio: 325.64, ticket_abril: 610.98, ticket_trend: [280.53, 720.19, 610.98],
+      pct_meta: 0.0, projecao: 12338.00, fat_abril: 29937.9, pedidos_abril: 49,
+      por_dia: { "05/05": 1796, "06/05": 227, "08/05": 1559 },
+      ultimas_vendas: [{data:"08/05",cliente:"João Marcos Souza",valor:780},{data:"08/05",cliente:"Barbearia Nº 1 Parque 10",valor:627},{data:"06/05",cliente:"Lucas Freitas da Costa",valor:227},{data:"05/05",cliente:"Barbearia Nº 1 Dom Pedro",valor:561},{data:"05/05",cliente:"Marcelo Vitor Silva",valor:477}],
+      top_clientes: [["João Marcos Souza da Silva",780],["Barbearia Nº 1 Parque 10",627],["Barbearia Nº 1 Dom Pedro",561],["Marcelo Vitor Costa da Silva",477],["Marley Jezine (ESTÉTICA) - Pele Bela Manaus",360],["Lucas Freitas da Costa",227],["José Galdino da Silva Neto",212],["Joelesson Gomes de Souza",186]],
+      top_produtos: [["MATTE CLAY 80G - BABOON",414],["MANTA TECHNATURE 30X38 PLUS G - ESTÉTICA - GVE",360],["GOLA HIGIENICA DESCARTAVEL DE PESCOCO PARA USO EM BARBEARIA - FOX",240],["PASTA TEIA 130G - SHARK BARBER",240],["TOALHA BARBEARIA  30x45 cm -500 UN. - HIGIMAXX",240],["LEAVE-IN 240ML - BABOON",228],["SKIN PROTECTION - PÓS-BARBA EFERVESCENTE - BABOON",220],["BALM TIME LIZ - 140ML - MACHO-LÂNDIA",204]]
     },
     "Jalena": {
       fat_maio: 3926.99, fat_abc: 3033.99, pedidos: 11, clientes: 11, ticket_medio: 357, ticket_abril: 0, ticket_trend: [0,0,0],
-      pct_meta: 26.2, projecao: 11066.97, fat_abril: 0, pedidos_abril: 0,
+      pct_meta: 26.2, projecao: 13526.30, fat_abril: 0, pedidos_abril: 0,
       por_dia: { "06/05": 640, "07/05": 412, "08/05": 2874.99 },
+      ultimas_vendas: [{data:"08/05",cliente:"Barbearia Dom Capone Ponta Negra",valor:725},{data:"08/05",cliente:"Barbearia Dom Capone Carrefour",valor:635},{data:"08/05",cliente:"Barbearia Dom Capone Sumaúma",valor:440},{data:"07/05",cliente:"Ygson de Sena Lira",valor:348.99},{data:"06/05",cliente:"William Ferreira",valor:325}],
       top_clientes: [["Barbearia Dom Capone (DB Ponta Negra)",725],["Barbearia Dom Capone (Carrefour Flores)",635],["Barbearia Dom Capone (Shopping Sumaúma)",440],["Barbearia Dom Capone (DB Nova Cidade)",421],["Ygson de Sena Lira",348.99],["William Ferreira",325],["Jheferson Paiva da Silva",305],["Jonatan Tenazor Velasquez",253]],
       top_produtos: [["CREME EFEITO TEIA 80G - FOX",733],["PASTA PREMIUM 80G - FOX",715],["BALM 140ML - BABOON",360],["APARADOR DE BARBA PORTÁTIL - TRAVEL SHAVER - WAHL",318],["TOALHA BARBEARIA  30x45 cm -500 UN. - HIGIMAXX",270],["TESOURA FIO NAVALHA  F2-60N - UMI",230],["CREME PÓS-BARBA BIG MENTHOL 350G - BIG BARBER",190],["ULTRA HOLD 80G - BABOON",138]]
     }
@@ -838,7 +871,7 @@ const D = {
     {mes:"2025-12",vlr_bruto:81507.30},{mes:"2026-01",vlr_bruto:87915.83},
     {mes:"2026-02",vlr_bruto:61461.15},{mes:"2026-03",vlr_bruto:114319.03},
     {mes:"2026-04",vlr_bruto:83244.23},
-    {mes:"2026-05",vlr_bruto:80385.79,projecao:true}
+    {mes:"2026-05",vlr_bruto:83875.63,projecao:true}
   ],
   historico_vendedor: {
     "Erivan Lima": [
@@ -849,7 +882,7 @@ const D = {
       {mes:"2025-12",vlr_bruto:37011.84},{mes:"2026-01",vlr_bruto:47392.16},
       {mes:"2026-02",vlr_bruto:38469.34},{mes:"2026-03",vlr_bruto:55611.32},
       {mes:"2026-04",vlr_bruto:28795.33},
-      {mes:"2026-05",vlr_bruto:43611.36,projecao:true}
+      {mes:"2026-05",vlr_bruto:50406.00,projecao:true}
     ],
     "Róger Silva": [
       {mes:"2025-04",vlr_bruto:25307.37},{mes:"2025-05",vlr_bruto:35742.51},
@@ -859,7 +892,7 @@ const D = {
       {mes:"2025-12",vlr_bruto:23816.85},{mes:"2026-01",vlr_bruto:21881},
       {mes:"2026-02",vlr_bruto:15136.98},{mes:"2026-03",vlr_bruto:24859},
       {mes:"2026-04",vlr_bruto:20027},
-      {mes:"2026-05",vlr_bruto:10427.27,projecao:true}
+      {mes:"2026-05",vlr_bruto:7605.33,projecao:true}
     ],
     "Lucas de Mello Valente": [
       {mes:"2025-04",vlr_bruto:16243.82},{mes:"2025-05",vlr_bruto:26171.90},
@@ -869,7 +902,7 @@ const D = {
       {mes:"2025-12",vlr_bruto:20229.61},{mes:"2026-01",vlr_bruto:18642.67},
       {mes:"2026-02",vlr_bruto:7854.83},{mes:"2026-03",vlr_bruto:33848.71},
       {mes:"2026-04",vlr_bruto:29937.90},
-      {mes:"2026-05",vlr_bruto:15280.18,projecao:true}
+      {mes:"2026-05",vlr_bruto:12338.00,projecao:true}
     ],
     "Jalena": [
       {mes:"2025-04",vlr_bruto:0},{mes:"2025-05",vlr_bruto:0},
@@ -879,7 +912,7 @@ const D = {
       {mes:"2025-12",vlr_bruto:0},{mes:"2026-01",vlr_bruto:0},
       {mes:"2026-02",vlr_bruto:0},{mes:"2026-03",vlr_bruto:0},
       {mes:"2026-04",vlr_bruto:0},
-      {mes:"2026-05",vlr_bruto:11066.97,projecao:true}
+      {mes:"2026-05",vlr_bruto:13526.30,projecao:true}
     ]
   },
   insights: {
@@ -964,61 +997,63 @@ const D = {
 const fmt = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 const fmtK = v => v >= 1000 ? 'R$ ' + (v/1000).toFixed(1).replace('.',',') + 'K' : fmt(v);
 const mesLabel = m => {const [y,mo]=m.split('-');const ns=['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];return ns[+mo]+'/'+y.slice(2)};
-const vColors = {'Erivan Lima':'#3b82f6','Róger Silva':'#a78bfa','Lucas de Mello Valente':'#22c55e','Jalena':'#fb923c'};
+const vColors = {'Erivan Lima':'#3b82f6','Róger Silva':'#fb923c','Lucas de Mello Valente':'#22c55e','Jalena':'#ec4899'};
 const vShort = {'Erivan Lima':'Erivan','Róger Silva':'Róger','Lucas de Mello Valente':'Grupo Valente','Jalena':'Jalena'};
 
 function initT1() {
   const pct = D.total_maio / D.meta_empresa * 100;
   document.getElementById('t1-fat').textContent = fmtK(D.total_maio);
   document.getElementById('t1-meta').textContent = 'Meta: ' + fmt(D.meta_empresa);
-  document.getElementById('t1-pct').textContent = pct.toFixed(1).replace('.',',') + '%';
-  document.getElementById('t1-pct').style.color = pct >= 50 ? 'var(--green)' : pct >= 30 ? 'var(--gold)' : 'var(--red)';
   document.getElementById('t1-dias').textContent = D.dias_corridos_passados + ' de ' + D.dias_corridos_total + ' dias corridos';
-  document.getElementById('t1-dias-rest').textContent = D.dias_corridos_restantes + ' dias corridos restantes';
   setTimeout(()=>{ document.getElementById('t1-bar').style.width = Math.min(pct,100)+'%'; }, 300);
   const barPct = document.getElementById('t1-bar-pct');
-  if (barPct) barPct.textContent = pct.toFixed(1).replace('.',',') + '%';
-  document.getElementById('t1-proj').textContent = fmtK(D.projecao);
-  const diff = D.projecao - D.meta_empresa;
-  document.getElementById('t1-proj-sub').textContent = diff >= 0 ? '▲ '+fmtK(diff)+' acima da meta' : '▼ '+fmtK(Math.abs(diff))+' abaixo da meta';
-  document.getElementById('t1-proj-sub').style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
-  // Pega os 2 dias mais recentes COM venda > 0 dinamicamente
-  const diasOrdenados = Object.keys(D.vendas_por_dia)
-    .filter(k => D.vendas_por_dia[k] > 0)
-    .sort((a,b) => {
-      const [da,ma] = a.split('/').map(Number);
-      const [db,mb] = b.split('/').map(Number);
-      return (ma-mb) || (da-db);
-    });
-  const ultimo = diasOrdenados[diasOrdenados.length-1];
-  const penultimo = diasOrdenados[diasOrdenados.length-2];
-  if (ultimo) {
-    document.getElementById('t1-hoje').textContent = fmtK(D.vendas_por_dia[ultimo]);
-    const lhoje = document.querySelector('.day-card.today .kpi-sub');
-    if (lhoje) lhoje.textContent = ultimo + '/2026';
-  }
-  if (penultimo) {
-    document.getElementById('t1-d2').textContent = fmtK(D.vendas_por_dia[penultimo]);
-    // atualiza data abaixo do card "Anteontem"
-    const cards = document.querySelectorAll('#t1 .day-card');
-    if (cards[0]) {
-      const sub = cards[0].querySelector('.kpi-sub');
-      if (sub) sub.textContent = penultimo + '/2026';
+  if (barPct) {
+    barPct.textContent = pct.toFixed(1).replace('.',',') + '%';
+    // cor da barra reflete o status sem precisar de texto separado
+    const barFill = document.getElementById('t1-bar');
+    if (barFill) {
+      const cor = pct >= 100 ? 'var(--green)' : pct >= 80 ? 'var(--blue)' : pct >= 50 ? 'var(--gold)' : 'var(--red)';
+      // Mantém o gradiente dourado pra não destoar do tema; só muda se quiser sinalizar
     }
   }
+  document.getElementById('t1-proj').textContent = fmtK(D.projecao);
+  // KPIs secundarios: total de pedidos e clientes da equipe
+  const ped = Object.values(D.vendedores||{}).reduce((s,v)=>s+(v.pedidos||0),0);
+  const cli = Object.values(D.vendedores||{}).reduce((s,v)=>s+(v.clientes||0),0);
+  const pedEl = document.getElementById('t1-pedidos');
+  const cliEl = document.getElementById('t1-clientes');
+  if (pedEl) pedEl.textContent = ped;
+  if (cliEl) cliEl.textContent = cli;
+  // Calendário-baseado: anteontem (D-2), ontem (D-1), hoje (D) em Manaus
+  const agoraManaus = new Date(Date.now() - new Date().getTimezoneOffset()*60000 - 4*3600000);
+  const fmtDia = d => String(d.getUTCDate()).padStart(2,'0') + '/' + String(d.getUTCMonth()+1).padStart(2,'0');
+  const fmtSub = d => fmtDia(d) + '/' + d.getUTCFullYear();
+  const lookup = k => D.vendas_por_dia[k] || 0;
+  const hojeDt = new Date(agoraManaus.getTime());
+  const ontemDt = new Date(agoraManaus.getTime() - 86400000);
+  const anteontemDt = new Date(agoraManaus.getTime() - 2*86400000);
+  document.getElementById('t1-hoje').textContent = fmtK(lookup(fmtDia(hojeDt)));
+  document.getElementById('t1-hoje-data').textContent = fmtSub(hojeDt);
+  document.getElementById('t1-d1').textContent = fmtK(lookup(fmtDia(ontemDt)));
+  document.getElementById('t1-d1-data').textContent = fmtSub(ontemDt);
+  document.getElementById('t1-d2').textContent = fmtK(lookup(fmtDia(anteontemDt)));
+  document.getElementById('t1-d2-data').textContent = fmtSub(anteontemDt);
 
-  // Ticket médio geral
+  // Ticket médio geral — layout compacto pra coluna estreita
   const tkVar = D.ticket_geral.var_pct;
   const tkEl = document.getElementById('t1-ticket');
   if(tkEl) {
+    const totalPedidos = Object.values(D.vendedores||{}).reduce((s,v)=>s+(v.pedidos||0),0);
+    const cor = tkVar >= 0 ? 'var(--green)' : 'var(--red)';
+    const seta = tkVar >= 0 ? '▲' : '▼';
     tkEl.innerHTML = `
-      <div class="kpi-label">Ticket Médio · Grupo</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:56px;line-height:1;color:var(--text)">${fmtK(D.ticket_geral.maio)}</div>
-      <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
-        <span style="font-size:13px;color:var(--muted)">Abril: ${fmtK(D.ticket_geral.abril)}</span>
-        <span style="font-size:13px;font-weight:700;color:${tkVar>=0?'var(--green)':'var(--red)'}">${tkVar>=0?'▲':'▼'} ${Math.abs(tkVar).toFixed(1).replace('.',',')}%</span>
+      <div class="kpi-label" style="white-space:nowrap">Ticket Médio</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;line-height:1;color:var(--text);margin-top:10px;letter-spacing:1px">${fmtK(D.ticket_geral.maio)}</div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:${cor}">${seta} ${Math.abs(tkVar).toFixed(1).replace('.',',')}%</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">vs ${fmtK(D.ticket_geral.abril)} (abril)</div>
       </div>
-      <div style="font-size:11px;color:var(--dim);margin-top:4px">*início de mês · ${(()=>{ let p=0; for (const v of Object.values(D.vendedores||{})) p+=(v.pedidos||0); return p; })()} pedidos</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:12px">${totalPedidos} pedidos no mês</div>
     `;
   }
   const dateStr = new Date(D.hoje+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
@@ -1252,18 +1287,42 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
         ${listaProd}
       </div>
       <div class="vend-card" style="flex:0">
-        <div class="vend-card-title">vs Mês Anterior (Abril)</div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--muted)">${fmtK(v.fat_abril)}</div>
-            <div style="font-size:12px;color:var(--muted)">Abril 2026</div>
-          </div>
-          <div style="font-size:28px;color:var(--dim)">→</div>
-          <div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:${accentColor}">${fmtK(v.fat_maio)}</div>
-            <div style="font-size:12px;color:var(--muted)">Maio 2026</div>
-          </div>
-        </div>
+        <div class="vend-card-title">Últimas 5 Vendas · Maio</div>
+        ${(() => {
+          const ult = v.ultimas_vendas || [];
+          if (ult.length === 0) return '<div style="color:var(--muted);font-size:12px;padding:8px 0">Sem vendas no mês</div>';
+          return ult.map((c, i) => {
+            const nome = (c.cliente || '—').split(' ').slice(0,3).join(' ');
+            return `<div class="list-item"><span style="font-size:11px;color:var(--muted);font-weight:600;min-width:38px;flex-shrink:0">${c.data}</span><span class="list-item-name" title="${c.cliente}">${nome}</span><span class="list-item-val">${fmtK(c.valor)}</span></div>`;
+          }).join('');
+        })()}
+      </div>
+      <div class="vend-card" style="flex:0">
+        <div class="vend-card-title">vs Mês Anterior (mesmos dias)</div>
+        ${(() => {
+          const dias = D.dias_corridos_passados || 1;
+          const diasMesAnterior = 30; // abril tem 30 dias
+          const abrilProporcional = (v.fat_abril || 0) * dias / diasMesAnterior;
+          const variacao = abrilProporcional > 0 ? ((v.fat_maio - abrilProporcional) / abrilProporcional * 100) : 0;
+          const cor = variacao >= 0 ? 'var(--green)' : 'var(--red)';
+          const seta = variacao >= 0 ? '▲' : '▼';
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--muted);line-height:1">${fmtK(abrilProporcional)}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:4px">Abril (dias 1-${dias})</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${cor};line-height:1">${seta} ${Math.abs(variacao).toFixed(1).replace('.',',')}%</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${accentColor};line-height:1">${fmtK(v.fat_maio)}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:4px">Maio (dias 1-${dias})</div>
+              </div>
+            </div>
+            <div style="font-size:10px;color:var(--dim);margin-top:8px;text-align:center">Abril total: ${fmtK(v.fat_abril)} · ${v.pedidos_abril} pedidos</div>
+          `;
+        })()}
       </div>
     </div>
   `;
@@ -1381,14 +1440,14 @@ function initT7() {
       datasets:[
         // Linhas principais (ponto vazado + segmento tracejado para projecao)
         {label:'Erivan',data:eData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#3b82f6','#0d1220'),pointBorderColor:ptBor('#3b82f6','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:1,segment:{borderDash:segDash}},
-        {label:'Róger',data:rData,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#a78bfa','#0d1220'),pointBorderColor:ptBor('#a78bfa','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:2,segment:{borderDash:segDash}},
+        {label:'Róger',data:rData,borderColor:'#fb923c',backgroundColor:'rgba(251,146,60,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#fb923c','#0d1220'),pointBorderColor:ptBor('#fb923c','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:2,segment:{borderDash:segDash}},
         {label:'Grupo Valente',data:lData,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#22c55e','#0d1220'),pointBorderColor:ptBor('#22c55e','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:3,segment:{borderDash:segDash}},
-        {label:'Jalena',data:jData,borderColor:'#fb923c',backgroundColor:'rgba(251,146,60,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#fb923c','#0d1220'),pointBorderColor:ptBor('#fb923c','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:4,segment:{borderDash:segDash}},
+        {label:'Jalena',data:jData,borderColor:'#ec4899',backgroundColor:'rgba(236,72,153,0.07)',tension:0.4,pointRadius:6,pointBackgroundColor:ptBg('#ec4899','#0d1220'),pointBorderColor:ptBor('#ec4899','#0d1220'),pointBorderWidth:2,borderWidth:3,fill:true,order:4,segment:{borderDash:segDash}},
         // Tendências tracejadas
         {label:'Tendência Erivan',data:tendencia(eData),borderColor:'rgba(59,130,246,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:5},
-        {label:'Tendência Róger',data:tendencia(rData),borderColor:'rgba(167,139,250,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:6},
+        {label:'Tendência Róger',data:tendencia(rData),borderColor:'rgba(251,146,60,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:6},
         {label:'Tendência GV',data:tendencia(lData),borderColor:'rgba(34,197,94,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:7},
-        {label:'Tendência Jalena',data:tendencia(jData),borderColor:'rgba(251,146,60,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:8},
+        {label:'Tendência Jalena',data:tendencia(jData),borderColor:'rgba(236,72,153,0.5)',borderDash:[8,4],borderWidth:2,pointRadius:0,fill:false,tension:0,order:8},
       ]
     },
     options:{
@@ -1486,9 +1545,9 @@ updateDots(0);
 initT1();
 initT2();
 buildVendedorGrid('t3-grid','Erivan Lima','#3b82f6');
-buildVendedorGrid('t4-grid','Róger Silva','#a78bfa');
+buildVendedorGrid('t4-grid','Róger Silva','#fb923c');
 buildVendedorGrid('t5-grid','Lucas de Mello Valente','#22c55e');
-buildVendedorGrid('t6-grid','Jalena','#fb923c');
+buildVendedorGrid('t6-grid','Jalena','#ec4899');
 setTimeout(() => { initT6(); initT7(); }, 100);
 startTimer();
 
