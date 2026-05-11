@@ -1,14 +1,14 @@
 name: Atualizar Dashboard Diariamente
 
 on:
-  # Roda automaticamente todo dia às 11:00 UTC (08:00 horário de Manaus)
+  # A cada hora, das 08:00 às 22:00 (horário de Manaus, UTC-4)
+  # = 12-23h UTC + 00-02h UTC do dia seguinte
   schedule:
-    - cron: '0 11 * * *'
-  # Permite disparar manualmente da UI do GitHub
+    - cron: '0 0-2,12-23 * * *'
   workflow_dispatch:
 
 permissions:
-  contents: write  # pra commitar o index.html atualizado
+  contents: write
 
 jobs:
   update:
@@ -22,6 +22,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Instalar dependências
+        run: pip install pynacl
+
       - name: Rodar atualizar_dados.py em modo Conta Azul
         env:
           CA_CLIENT_ID: ${{ secrets.CA_CLIENT_ID }}
@@ -33,6 +36,17 @@ jobs:
             --ca-fetch \
             --target "${GITHUB_WORKSPACE}/index.html"
 
+      - name: Persistir novo refresh_token (se rotacionou)
+        if: env.NEW_REFRESH_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.SECRETS_PAT }}
+        run: |
+          cd "${GITHUB_WORKSPACE}"
+          python3 scripts/update_github_secret.py \
+            "${{ github.repository }}" \
+            CA_REFRESH_TOKEN \
+            "$NEW_REFRESH_TOKEN"
+
       - name: Commit e push se houver mudanças
         run: |
           git config user.name "github-actions[bot]"
@@ -41,7 +55,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nenhuma mudanca — index.html identico ao anterior"
           else
-            DATA=$(date '+%Y-%m-%d %H:%M')
+            DATA=$(date '+%Y-%m-%d %H:%M UTC')
             git commit -m "Atualizacao automatica via API Conta Azul — $DATA"
             git push
             echo "Commit feito!"
