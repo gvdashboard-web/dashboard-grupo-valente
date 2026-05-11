@@ -1,0 +1,38 @@
+name: Histórico Vendedor (sob demanda)
+
+on:
+  workflow_dispatch:
+    inputs:
+      vendedor:
+        description: 'Nome do vendedor (ex: "Erivan Lima")'
+        required: true
+        default: 'Erivan Lima'
+        type: string
+      meses:
+        description: 'Quantos meses pra tras'
+        required: true
+        default: '12'
+        type: string
+
+jobs:
+  historico:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Rodar query
+        env:
+          CA_CLIENT_ID: ${{ secrets.CA_CLIENT_ID }}
+          CA_CLIENT_SECRET: ${{ secrets.CA_CLIENT_SECRET }}
+          CA_REFRESH_TOKEN: ${{ secrets.CA_REFRESH_TOKEN }}
+        run: |
+          cd "${GITHUB_WORKSPACE}"
+          python3 scripts/puxar_historico_vendedor.py \
+            "${{ github.event.inputs.vendedor }}" \
+            "${{ github.event.inputs.meses }}"
