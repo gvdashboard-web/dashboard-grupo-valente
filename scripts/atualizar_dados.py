@@ -13,8 +13,10 @@ Por padrao usa ~/Documents/gv-dashboard/index.html como alvo.
 """
 import argparse, calendar, csv, json, os, re, sys
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+MANAUS_TZ = timezone(timedelta(hours=-4))
 
 # Reaproveita parsers/categorizacao do gerar_relatorio.py
 SCRIPTS_DIR = Path(__file__).parent
@@ -192,6 +194,8 @@ def aggregate(items):
         'mes': mes,
         'mes_nome': MES_NOME_PT[mes],
         'mes_abrev': MES_ABREV_PT[mes],
+        # Timestamp da geracao em horario de Manaus (UTC-4)
+        'atualizado_em': datetime.now(MANAUS_TZ).strftime('%d/%m %H:%M'),
         # D.hoje = data de exibicao na TV (dia apos o ultimo registro)
         'hoje': viewing_date.strftime('%Y-%m-%d'),
         # dias_corridos_passados = dias com dados (base da projecao e do ritmo)
@@ -269,6 +273,11 @@ def patch_global(p, agg):
         r'hoje:\s*"[^"]+"',
         f'hoje: "{agg["hoje"]}"',
         'hoje'
+    )
+    p.replace(
+        r'atualizado_em:\s*"[^"]*"',
+        f'atualizado_em: "{agg["atualizado_em"]}"',
+        'atualizado_em'
     )
     p.replace(
         r'dias_corridos_passados:\s*\d+',
