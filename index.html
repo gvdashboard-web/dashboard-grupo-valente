@@ -361,7 +361,26 @@
   #t2 .badge-red { background: rgba(239,68,68,.15); color: var(--red); }
   #t2 .badge-gray { background: rgba(107,127,160,.15); color: var(--muted); }
 
-  /* TELAS 3-5 — VENDEDOR */
+  /* TELAS 3-6 — VENDEDOR (header com nome grande) */
+  .vend-screen .vendor-banner {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+  .vend-screen .vendor-tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .vend-screen .vendor-name-big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 4px;
+    line-height: 1;
+  }
   .vend-screen .vend-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -647,7 +666,10 @@
   <div class="header">
     <div class="header-left">
       <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Vendedor · Erivan Lima</div>
+      <div class="vendor-banner">
+        <span class="vendor-tag">Vendedor</span>
+        <span class="vendor-name-big" style="color:var(--erivan)">ERIVAN LIMA</span>
+      </div>
     </div>
     <div class="header-right">
       <div class="date-display"></div>
@@ -662,7 +684,10 @@
   <div class="header">
     <div class="header-left">
       <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Vendedor · Róger Silva</div>
+      <div class="vendor-banner">
+        <span class="vendor-tag">Vendedor</span>
+        <span class="vendor-name-big" style="color:var(--roger)">RÓGER SILVA</span>
+      </div>
     </div>
     <div class="header-right">
       <div class="date-display"></div>
@@ -672,12 +697,15 @@
   <div class="vend-grid" id="t4-grid"></div>
 </div>
 
-<!-- TELA 5: LUCAS -->
+<!-- TELA 5: GRUPO VALENTE (Lucas) -->
 <div class="screen vend-screen" id="t5">
   <div class="header">
     <div class="header-left">
       <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Vendedor · Grupo Valente</div>
+      <div class="vendor-banner">
+        <span class="vendor-tag">Vendedor</span>
+        <span class="vendor-name-big" style="color:var(--lucas)">GRUPO VALENTE</span>
+      </div>
     </div>
     <div class="header-right">
       <div class="date-display"></div>
@@ -692,7 +720,10 @@
   <div class="header">
     <div class="header-left">
       <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Vendedor · Jalena</div>
+      <div class="vendor-banner">
+        <span class="vendor-tag">Vendedor</span>
+        <span class="vendor-name-big" style="color:var(--jalena)">JALENA</span>
+      </div>
     </div>
     <div class="header-right">
       <div class="date-display"></div>
@@ -751,6 +782,7 @@
 
 <script>
 const D = {
+  atualizado_em: "ainda nao",
   hoje: "2026-05-10",
   dias_corridos_passados: 9,
   dias_corridos_total: 31,
@@ -1459,15 +1491,16 @@ buildVendedorGrid('t6-grid','Jalena','#fb923c');
 setTimeout(() => { initT6(); initT7(); }, 100);
 startTimer();
 
-// Data em tempo real
-setInterval(() => {
+// Data em tempo real + "Atualizado em" em TODAS as telas
+function refreshDateDisplays() {
   const now = new Date();
-  const str = now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-  document.querySelectorAll('#t1-date, #t2-date').forEach(el => { if(el) el.textContent = str.charAt(0).toUpperCase()+str.slice(1); });
-}, 60000);
-document.querySelectorAll('#t1-date, #t2-date').forEach(el => {
-  if(el){const now=new Date();const str=now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});el.textContent=str.charAt(0).toUpperCase()+str.slice(1);}
-});
+  const dateStr = now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const dateCap = dateStr.charAt(0).toUpperCase()+dateStr.slice(1);
+  const html = `<div>${dateCap}</div><div style="font-size:11px;color:var(--dim);margin-top:2px;letter-spacing:.5px;">Atualizado: ${D.atualizado_em || '—'}</div>`;
+  document.querySelectorAll('.date-display').forEach(el => { el.innerHTML = html; });
+}
+refreshDateDisplays();
+setInterval(refreshDateDisplays, 60000);
 </script>
 </body>
 </html>
