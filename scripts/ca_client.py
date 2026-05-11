@@ -62,16 +62,23 @@ def cred_set(env_var, keychain_service, value):
 
 class ContaAzulClient:
     def __init__(self):
-        self.client_id = cred_get('CA_CLIENT_ID', 'contaazul-client-id')
-        self.client_secret = cred_get('CA_CLIENT_SECRET', 'contaazul-client-secret')
-        self.refresh_token = cred_get('CA_REFRESH_TOKEN', 'contaazul-refresh-token')
-        self.access_token = cred_get('CA_ACCESS_TOKEN', 'contaazul-access-token')
+        # .strip() pra remover qualquer espaco/newline acidental
+        self.client_id = (cred_get('CA_CLIENT_ID', 'contaazul-client-id') or '').strip()
+        self.client_secret = (cred_get('CA_CLIENT_SECRET', 'contaazul-client-secret') or '').strip()
+        self.refresh_token = (cred_get('CA_REFRESH_TOKEN', 'contaazul-refresh-token') or '').strip()
+        self.access_token = (cred_get('CA_ACCESS_TOKEN', 'contaazul-access-token') or '').strip()
 
         if not all([self.client_id, self.client_secret, self.refresh_token]):
             origem = 'env vars (CA_CLIENT_ID, CA_CLIENT_SECRET, CA_REFRESH_TOKEN)' if IS_CI else 'Keychain'
             raise RuntimeError(
                 f'Credenciais incompletas em {origem}. Rode `auth_contaazul.py` primeiro.'
             )
+
+        # Log de debug (so em CI, pra entender o que ta acontecendo)
+        if IS_CI:
+            print(f'[ca_client] client_id len={len(self.client_id)}, '
+                  f'secret len={len(self.client_secret)}, '
+                  f'refresh len={len(self.refresh_token)}', file=sys.stderr)
 
     def _refresh(self):
         """Renova access_token usando refresh_token."""
@@ -91,8 +98,14 @@ class ContaAzulClient:
             },
             method='POST'
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            tokens = json.loads(resp.read().decode())
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                tokens = json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode()
+            raise RuntimeError(
+                f'Refresh token falhou — HTTP {e.code}: {err_body[:500]}'
+            ) from e
 
         self.access_token = tokens['access_token']
         cred_set('CA_ACCESS_TOKEN', 'contaazul-access-token', self.access_token)
