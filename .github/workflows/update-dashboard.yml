@@ -1,0 +1,48 @@
+name: Atualizar Dashboard Diariamente
+
+on:
+  # Roda automaticamente todo dia às 11:00 UTC (08:00 horário de Manaus)
+  schedule:
+    - cron: '0 11 * * *'
+  # Permite disparar manualmente da UI do GitHub
+  workflow_dispatch:
+
+permissions:
+  contents: write  # pra commitar o index.html atualizado
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Rodar atualizar_dados.py em modo Conta Azul
+        env:
+          CA_CLIENT_ID: ${{ secrets.CA_CLIENT_ID }}
+          CA_CLIENT_SECRET: ${{ secrets.CA_CLIENT_SECRET }}
+          CA_REFRESH_TOKEN: ${{ secrets.CA_REFRESH_TOKEN }}
+        run: |
+          cd "${GITHUB_WORKSPACE}"
+          python3 scripts/atualizar_dados.py \
+            --ca-fetch \
+            --target "${GITHUB_WORKSPACE}/index.html"
+
+      - name: Commit e push se houver mudanças
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "Nenhuma mudanca — index.html identico ao anterior"
+          else
+            DATA=$(date '+%Y-%m-%d %H:%M')
+            git commit -m "Atualizacao automatica via API Conta Azul — $DATA"
+            git push
+            echo "Commit feito!"
+          fi
