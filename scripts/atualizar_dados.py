@@ -220,21 +220,18 @@ def fetch_vendas_resumo(client, ano_atual, mes_atual, meses_atras=3):
     return out
 
 
-def compute_silencio(vendas_resumo, vendas_mes_atual, threshold_dias=45, data_ref=None, top_n=5):
-    """Para cada vendedor, calcula clientes em silencio.
+def compute_silencio(vendas_resumo, vendas_mes_atual,
+                     threshold_dias_min=45, threshold_dias_max=120,
+                     data_ref=None, top_n=5):
+    """Para cada vendedor, calcula clientes em silencio NA JANELA [min, max] dias.
+    Acima de threshold_dias_max o cliente eh considerado perdido (nao aparece).
     - vendas_resumo: lista de {data, cliente, vendor, valor} dos meses anteriores
     - vendas_mes_atual: set de (vendor, cliente) que compraram no mes atual
-    - threshold_dias: minimo de dias desde a ultima compra pra contar como silencio
-    - data_ref: data de referencia (default = hoje em Manaus)
     Retorna {vendor_key: [{nome, dias, valor_ult, data_ult}, ...top_n]}.
     """
     if data_ref is None:
         data_ref = datetime.now(MANAUS_TZ).replace(tzinfo=None)
-    elif hasattr(data_ref, 'date'):
-        # ja datetime sem tz, ok
-        pass
 
-    # Agrupa por (vendor, cliente)
     grouped = defaultdict(lambda: {'ultima_data': None, 'valor_ult': 0, 'n_vendas': 0})
     for v in vendas_resumo:
         key = (v['vendor'], v['cliente'])
@@ -247,9 +244,8 @@ def compute_silencio(vendas_resumo, vendas_mes_atual, threshold_dias=45, data_re
     out = defaultdict(list)
     for (vendor, cliente), info in grouped.items():
         dias = (data_ref - info['ultima_data']).days
-        if dias < threshold_dias:
-            continue
-        # E o cliente NAO pode ter comprado no mes atual
+        if dias < threshold_dias_min or dias > threshold_dias_max:
+            continue  # fora da janela "silencio" — ou recente ou perdido
         if (vendor, cliente) in vendas_mes_atual:
             continue
         out[vendor].append({
@@ -259,7 +255,6 @@ def compute_silencio(vendas_resumo, vendas_mes_atual, threshold_dias=45, data_re
             'data_ult': info['ultima_data'].strftime('%d/%m'),
         })
 
-    # Ordena por valor_ult desc, top_n
     for vendor in out:
         out[vendor].sort(key=lambda x: -x['valor_ult'])
         out[vendor] = out[vendor][:top_n]
@@ -996,11 +991,13 @@ def main():
 
         # Fetch leve dos 3 meses anteriores pra silencio + base_ativa
         try:
-            vendas_resumo = fetch_vendas_resumo(client, ano, mes, meses_atras=3)
+            # 4 meses anteriores: cobre janela de silencio ate 120 dias atras
+            vendas_resumo = fetch_vendas_resumo(client, ano, mes, meses_atras=4)
             # Set de (vendor, cliente) que compraram no mes atual
             vendas_atuais = {(it['vendor'], it['cliente']) for it in items}
             agg['silencio_by_vendor'] = compute_silencio(
-                vendas_resumo, vendas_atuais, threshold_dias=45
+                vendas_resumo, vendas_atuais,
+                threshold_dias_min=45, threshold_dias_max=120
             )
             agg['base_ativa_by_vendor'] = compute_base_ativa_meses(
                 vendas_resumo, items, ano, mes, meses=3
