@@ -50,14 +50,17 @@ def aggregate_csvs(pivot_path, transacional_path):
     return aggregate(items)
 
 
-def fetch_items_from_ca(ano, mes):
-    """Pega items diretamente da API Conta Azul (substitui exportacao manual de CSV)."""
+def fetch_items_from_ca(ano, mes, client=None):
+    """Pega items diretamente da API Conta Azul (substitui exportacao manual de CSV).
+    Aceita um client opcional pra reuso (evita 2 refreshes desnecessarios).
+    """
     from ca_client import ContaAzulClient
     from gerar_relatorio import categorizar, marca
     import calendar as cal_mod
 
-    print(f'  Conectando à API Conta Azul...')
-    client = ContaAzulClient()
+    if client is None:
+        print(f'  Conectando à API Conta Azul...')
+        client = ContaAzulClient()
 
     print(f'  Listando vendedores...')
     vendedores = client.get('/venda/vendedores')
@@ -136,6 +139,173 @@ def fetch_items_from_ca(ano, mes):
 
     print(f'  Total: {len(items)} itens de {len(set(i["sale"] for i in items))} vendas')
     return items
+
+
+def fetch_vendas_resumo(client, ano_atual, mes_atual, meses_atras=3):
+    """Busca vendas dos N meses anteriores ao mes atual, SEM puxar itens.
+    Bem mais leve que fetch_items_from_ca (~3 chamadas por vendedor vs ~50).
+    Retorna lista: [{data, cliente, vendor, valor}].
+    """
+    import calendar as cal_mod
+
+    # Mapeia nomes (mesmo de fetch_items_from_ca)
+    SELLER_NAMES_LOCAL = {
+        'Erivan Lima':            'erivan',
+        'Lucas de Mello Valente': 'lucas',
+        'Róger Silva':            'roger',
+        'Roger de Lima silva':    'roger',
+        'Jalena':                 'jalena',
+        'Célio Alex':             'celio',
+    }
+    vendedores = client.get('/venda/vendedores')
+    nome_to_id = {v['nome']: v['id'] for v in vendedores if v['nome'] in SELLER_NAMES_LOCAL}
+
+    # Calcula janela de meses anteriores (excluindo o mes atual)
+    janela = []
+    a, m = ano_atual, mes_atual
+    for _ in range(meses_atras):
+        if m == 1:
+            a, m = a - 1, 12
+        else:
+            m = m - 1
+        janela.append((a, m))
+    # janela = [(ano, mes), ...] dos meses anteriores
+
+    print(f'  Buscando vendas resumo (sem itens) dos meses {janela}...')
+    out = []
+    for nome_full, vid in nome_to_id.items():
+        vendor_key = SELLER_NAMES_LOCAL[nome_full]
+        for ano_b, mes_b in janela:
+            primeiro = f'{ano_b:04d}-{mes_b:02d}-01'
+            ultimo = f'{ano_b:04d}-{mes_b:02d}-{cal_mod.monthrange(ano_b, mes_b)[1]:02d}'
+            pagina = 1
+            while True:
+                res = client.get('/venda/busca',
+                    ids_vendedores=[vid],
+                    data_inicio=primeiro,
+                    data_fim=ultimo,
+                    totais='APPROVED',
+                    pagina=pagina,
+                    tamanho_pagina=500)
+                vendas = res.get('itens', []) if isinstance(res, dict) else []
+                if not vendas:
+                    break
+                for venda in vendas:
+                    try:
+                        data = datetime.strptime(venda['data'], '%Y-%m-%d')
+                    except (ValueError, KeyError):
+                        continue
+                    cliente_nome = venda.get('cliente', {}).get('nome', '?')
+                    # Tenta varios campos comuns de "total da venda"
+                    valor = (venda.get('totalCalculado') or
+                             venda.get('total') or
+                             venda.get('valorTotal') or
+                             venda.get('valor') or 0)
+                    try:
+                        valor = float(valor)
+                    except (TypeError, ValueError):
+                        valor = 0.0
+                    out.append({
+                        'data': data,
+                        'cliente': cliente_nome,
+                        'vendor': vendor_key,
+                        'valor': valor,
+                    })
+                if len(vendas) < 500:
+                    break
+                pagina += 1
+        print(f'    {nome_full}: {sum(1 for x in out if x["vendor"]==vendor_key)} vendas em {meses_atras} meses')
+
+    print(f'  Resumo historico: {len(out)} vendas totais')
+    return out
+
+
+def compute_silencio(vendas_resumo, vendas_mes_atual, threshold_dias=45, data_ref=None, top_n=5):
+    """Para cada vendedor, calcula clientes em silencio.
+    - vendas_resumo: lista de {data, cliente, vendor, valor} dos meses anteriores
+    - vendas_mes_atual: set de (vendor, cliente) que compraram no mes atual
+    - threshold_dias: minimo de dias desde a ultima compra pra contar como silencio
+    - data_ref: data de referencia (default = hoje em Manaus)
+    Retorna {vendor_key: [{nome, dias, valor_ult, data_ult}, ...top_n]}.
+    """
+    if data_ref is None:
+        data_ref = datetime.now(MANAUS_TZ).replace(tzinfo=None)
+    elif hasattr(data_ref, 'date'):
+        # ja datetime sem tz, ok
+        pass
+
+    # Agrupa por (vendor, cliente)
+    grouped = defaultdict(lambda: {'ultima_data': None, 'valor_ult': 0, 'n_vendas': 0})
+    for v in vendas_resumo:
+        key = (v['vendor'], v['cliente'])
+        g = grouped[key]
+        if g['ultima_data'] is None or v['data'] > g['ultima_data']:
+            g['ultima_data'] = v['data']
+            g['valor_ult'] = v['valor']
+        g['n_vendas'] += 1
+
+    out = defaultdict(list)
+    for (vendor, cliente), info in grouped.items():
+        dias = (data_ref - info['ultima_data']).days
+        if dias < threshold_dias:
+            continue
+        # E o cliente NAO pode ter comprado no mes atual
+        if (vendor, cliente) in vendas_mes_atual:
+            continue
+        out[vendor].append({
+            'nome': cliente,
+            'dias': dias,
+            'valor_ult': round(info['valor_ult'], 2),
+            'data_ult': info['ultima_data'].strftime('%d/%m'),
+        })
+
+    # Ordena por valor_ult desc, top_n
+    for vendor in out:
+        out[vendor].sort(key=lambda x: -x['valor_ult'])
+        out[vendor] = out[vendor][:top_n]
+    return dict(out)
+
+
+def compute_base_ativa_meses(vendas_resumo, current_items, ano_atual, mes_atual, meses=3):
+    """Conta clientes unicos por vendedor em cada um dos N meses TOTAIS.
+    `meses` inclui o mes atual (parcial). Ex: meses=3 -> [anterior-1, anterior, atual].
+    Retorna {vendor_key: [{mes:"YYYY-MM", n:int, parcial:bool}, ...]}.
+    """
+    # Constroi lista de (ano, mes) — meses-1 anteriores + atual
+    months = []
+    a, m = ano_atual, mes_atual
+    for _ in range(meses - 1):
+        if m == 1:
+            a, m = a - 1, 12
+        else:
+            m = m - 1
+        months.append((a, m))
+    months = list(reversed(months))  # mais antigo primeiro
+    months.append((ano_atual, mes_atual))  # adiciona mes atual no fim
+
+    # Agrupa: {vendor: {(ano,mes): set(clientes)}}
+    by = defaultdict(lambda: defaultdict(set))
+    for v in vendas_resumo:
+        ym = (v['data'].year, v['data'].month)
+        if ym in months:
+            by[v['vendor']][ym].add(v['cliente'])
+    # Adiciona mes atual a partir de current_items
+    for it in current_items:
+        v_short = it.get('vendor')
+        if v_short:
+            by[v_short][(ano_atual, mes_atual)].add(it['cliente'])
+
+    out = {}
+    for vendor, perm in by.items():
+        out[vendor] = [
+            {
+                'mes': f'{y:04d}-{mo:02d}',
+                'n': len(perm.get((y, mo), set())),
+                'parcial': (y == ano_atual and mo == mes_atual),
+            }
+            for (y, mo) in months
+        ]
+    return out
 
 
 def aggregate(items):
@@ -583,12 +753,12 @@ def get_meta_global(html, nome):
     return None
 
 
-def patch_insights(p, nome, vd):
-    """Atualiza apenas: novos clientes, clientes_maio, concentracao DENTRO de insights.
-
-    Bug antigo: o regex global usava [^{}]*? que falha porque queda/silencio
-    contem sub-objetos {nome:...}. Aqui usamos brace-counting pra delimitar
-    o bloco do vendedor e fazer substituicoes locais.
+def patch_insights(p, nome, vd, silencio_list=None, base_ativa_list=None):
+    """Atualiza D.insights[nome] com formato novo:
+       silencio: [{nome, dias, valor_ult, data_ult}]
+       base_ativa_meses: [{mes, n, parcial}]
+    Os campos antigos (novos/concentracao/queda/clientes_*) NÃO são mais
+    atualizados — ficam congelados como compat, mas o JS não os renderiza mais.
     """
     bounds = _find_section_bounds(p.html, 'insights')
     if not bounds:
@@ -596,12 +766,11 @@ def patch_insights(p, nome, vd):
     sec_start, sec_end = bounds
     section = p.html[sec_start:sec_end]
 
-    # Acha o "Nome": { dentro da secao com brace counting
     km = re.search(r'"' + re.escape(nome) + r'":\s*\{', section)
     if not km:
         p.changes.append((f'insights {nome}', '(bloco não encontrado)', '(skip)'))
         return
-    blk_start = km.end() - 1  # '{'
+    blk_start = km.end() - 1
     depth = 0
     blk_end = None
     for i in range(blk_start, len(section)):
@@ -619,38 +788,49 @@ def patch_insights(p, nome, vd):
     def esc(s):
         return (s or '').replace('\\', '\\\\').replace('"', '\\"')
 
-    # novos = top_clientes (ate 5)
-    novos = vd['top_clientes'][:5]
-    novos_js = '[\n        ' + ',\n        '.join(
-        f'{{nome:"{esc(k)}", valor:{v:g}}}' for k,v in novos
-    ) + '\n      ]'
-    new_block = re.sub(r'novos:\s*\[[^\]]*\]', 'novos: ' + novos_js.replace('\\','\\\\'),
-                       block, count=1, flags=re.DOTALL)
-    # Workaround: re.sub interpreta \1 etc em replacement string; usamos lambda
-    new_block = re.sub(r'novos:\s*\[[^\]]*\]', lambda _: f'novos: {novos_js}',
-                       block, count=1, flags=re.DOTALL)
-
-    # concentracao
-    if vd['top_clientes']:
-        topc, topv = vd['top_clientes'][0]
-        pct = topv / max(vd['fat'], 1) * 100
-        conc_js = f'{{nome:"{esc(topc)}", pct:{pct:.1f}}}'
+    # ---- silencio (novo formato) ----
+    silencio_list = silencio_list or []
+    if silencio_list:
+        sil_parts = []
+        for s in silencio_list:
+            sil_parts.append(
+                f'{{nome:"{esc(s["nome"])}", dias:{s["dias"]}, '
+                f'valor_ult:{s["valor_ult"]:g}, data_ult:"{s["data_ult"]}"}}'
+            )
+        sil_js = '[\n        ' + ',\n        '.join(sil_parts) + '\n      ]'
     else:
-        conc_js = 'null'
-    new_block = re.sub(r'concentracao:\s*(\{[^}]*\}|null)',
-                       lambda _: f'concentracao: {conc_js}',
-                       new_block, count=1)
+        sil_js = '[]'
 
-    # clientes_maio
-    new_block = re.sub(r'clientes_maio:\s*\d+',
-                       f'clientes_maio: {vd["clientes"]}',
-                       new_block, count=1)
+    # Substitui silencio. Aceita ambos formatos antigos (com sub-objetos)
+    # usando regex com 1 nivel de chaves.
+    pattern_silencio = r'silencio:\s*\[(?:[^\[\]]|\{[^{}]*\})*\]'
+    new_block = re.sub(pattern_silencio, lambda _: f'silencio: {sil_js}',
+                       block, count=1, flags=re.DOTALL)
 
-    # Aplica no html
+    # ---- base_ativa_meses (campo novo) ----
+    base_ativa_list = base_ativa_list or []
+    if base_ativa_list:
+        ba_parts = []
+        for b in base_ativa_list:
+            parcial_str = 'true' if b.get('parcial') else 'false'
+            ba_parts.append(f'{{mes:"{b["mes"]}", n:{b["n"]}, parcial:{parcial_str}}}')
+        ba_js = '[' + ','.join(ba_parts) + ']'
+    else:
+        ba_js = '[]'
+
+    # Tenta substituir; se não existe, injeta antes de clientes_abril
+    if re.search(r'base_ativa_meses:\s*\[[^\]]*\]', new_block):
+        new_block = re.sub(r'base_ativa_meses:\s*\[[^\]]*\]',
+                           lambda _: f'base_ativa_meses: {ba_js}',
+                           new_block, count=1, flags=re.DOTALL)
+    else:
+        # Injeta antes do fechamento da chave do bloco
+        new_block = new_block.rstrip('}').rstrip() + f',\n      base_ativa_meses: {ba_js}\n    }}'
+
     section_new = section[:blk_start] + new_block + section[blk_end:]
     p.html = p.html[:sec_start] + section_new + p.html[sec_end:]
     p.changes.append((f'insights {nome}',
-                      f'clientes={vd["clientes"]} novos={len(novos)} pct={pct if vd["top_clientes"] else 0:.1f}',
+                      f'silencio={len(silencio_list)} base_ativa={len(base_ativa_list)}',
                       'OK'))
 
 
@@ -807,8 +987,30 @@ def main():
         ano = args.ano or now.year
         mes = args.mes or now.month
         print(f'Modo Conta Azul — buscando vendas de {MES_NOME_PT[mes]}/{ano}...')
-        items = fetch_items_from_ca(ano, mes)
+        # Instancia client UMA vez e reusa pra evitar refresh duplicado
+        from ca_client import ContaAzulClient
+        print(f'  Conectando à API Conta Azul...')
+        client = ContaAzulClient()
+        items = fetch_items_from_ca(ano, mes, client=client)
         agg = aggregate(items)
+
+        # Fetch leve dos 3 meses anteriores pra silencio + base_ativa
+        try:
+            vendas_resumo = fetch_vendas_resumo(client, ano, mes, meses_atras=3)
+            # Set de (vendor, cliente) que compraram no mes atual
+            vendas_atuais = {(it['vendor'], it['cliente']) for it in items}
+            agg['silencio_by_vendor'] = compute_silencio(
+                vendas_resumo, vendas_atuais, threshold_dias=45
+            )
+            agg['base_ativa_by_vendor'] = compute_base_ativa_meses(
+                vendas_resumo, items, ano, mes, meses=3
+            )
+            print(f'  Silencio computado por vendedor: {[(v, len(s)) for v,s in agg["silencio_by_vendor"].items()]}')
+            print(f'  Base ativa computada por vendedor: {[(v, [(b["mes"],b["n"]) for b in bs]) for v,bs in agg["base_ativa_by_vendor"].items()]}')
+        except Exception as e:
+            print(f'  AVISO: falha computando silencio/base_ativa: {e}')
+            agg['silencio_by_vendor'] = {}
+            agg['base_ativa_by_vendor'] = {}
     else:
         if not args.pivot or not args.transacional:
             print('ERRO: precisa de --pivot + --transacional OU --ca-fetch', file=sys.stderr)
@@ -846,11 +1048,18 @@ def main():
     patch_extras(p, agg, mes_ant_val, mes_ant_nome)
 
     # 2) por vendedor (patch_vendedor ja calcula+escreve a projecao individual)
+    silencio_by_v = agg.get('silencio_by_vendor', {})
+    base_ativa_by_v = agg.get('base_ativa_by_vendor', {})
+    # Map "Nome Cheio" -> vendor_key curto pra cruzar com computes
+    NAME_TO_KEY = {v: k for k, v in VENDOR_FULL_NAMES.items()}
     for nome, vd in agg['vendedores'].items():
         meta = get_meta_global(p.html, nome)
         hmax = historic_max.get(nome, 0)
         patch_vendedor(p, nome, vd, meta, agg['dias_corridos_total'], agg['dias_corridos_passados'], hmax)
-        patch_insights(p, nome, vd)
+        vkey = NAME_TO_KEY.get(nome)
+        sil = silencio_by_v.get(vkey, []) if vkey else []
+        ba = base_ativa_by_v.get(vkey, []) if vkey else []
+        patch_insights(p, nome, vd, silencio_list=sil, base_ativa_list=ba)
 
     # 3) zera vendedores SEM dados (mantem historico mas zera fat_maio/pedidos)
     for nome_full in VENDOR_FULL_NAMES.values():
