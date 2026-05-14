@@ -2261,6 +2261,30 @@ setInterval(refreshDateDisplays, 60000);
 
 // Garante foco no body pra TVs Samsung/LG capturarem keydown
 document.body.focus();
+
+// DEBUG: ?debug=keys mostra overlay com keyCode/code de cada tecla pressionada
+if (location.search.indexOf('debug=keys') >= 0) {
+  const dbg = document.createElement('div');
+  dbg.id = 'debug-keys';
+  dbg.style.cssText = 'position:fixed;top:10px;right:10px;z-index:99999;background:rgba(0,0,0,0.92);color:#fff;font-family:monospace;font-size:18px;padding:18px 24px;border-radius:12px;border:2px solid #f5a623;max-width:480px;line-height:1.6';
+  dbg.innerHTML = '<div style="color:#f5a623;font-weight:800;letter-spacing:2px;margin-bottom:10px">DEBUG — TECLAS</div><div id="debug-log" style="font-size:16px">aperte um botao do controle...</div>';
+  document.body.appendChild(dbg);
+  const log = (msg) => {
+    const el = document.getElementById('debug-log');
+    if (!el) return;
+    const ts = new Date().toLocaleTimeString();
+    el.innerHTML = `<div style="color:#fbbf24">[${ts}]</div><div>${msg}</div>` + (el.innerHTML.length < 2000 ? '<hr style="border:0;border-top:1px solid #333;margin:6px 0">' + el.innerHTML : '');
+  };
+  ['keydown','keyup','keypress'].forEach(ev => {
+    document.addEventListener(ev, (e) => {
+      log(`${ev}: code=<b>${e.code||'(vazio)'}</b> keyCode=<b style="color:#22c55e;font-size:22px">${e.keyCode}</b> key=${e.key||''}`);
+    }, true);  // capture phase pra pegar antes de qualquer preventDefault
+  });
+  document.addEventListener('click', (e) => {
+    log(`click: target=${e.target.tagName} x=${e.clientX} y=${e.clientY}`);
+  }, true);
+  console.log('[DEBUG] modo de captura de teclas ativo. Aperte botoes do controle.');
+}
 // Refocus caso algo roube (raro mas seguro)
 window.addEventListener('blur', () => setTimeout(() => document.body.focus(), 0));
 
