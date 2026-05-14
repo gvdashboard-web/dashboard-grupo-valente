@@ -584,50 +584,74 @@ def get_meta_global(html, nome):
 
 
 def patch_insights(p, nome, vd):
-    """Atualiza apenas: novos clientes, clientes_maio, concentracao."""
-    # Pega o bloco insights[nome]
-    pattern = re.compile(
-        r'"' + re.escape(nome) + r'":\s*\{[^{}]*?'
-        r'(novos:\s*\[[^\]]*\])[^{}]*?'
-        r'(concentracao:\s*\{[^}]*\}|concentracao:\s*null)[^{}]*?'
-        r'clientes_maio:\s*(\d+)',
-        re.DOTALL
-    )
-    m = pattern.search(p.html)
-    if not m:
-        return
+    """Atualiza apenas: novos clientes, clientes_maio, concentracao DENTRO de insights.
 
-    # novos = top_clientes (todos, ate 5)
+    Bug antigo: o regex global usava [^{}]*? que falha porque queda/silencio
+    contem sub-objetos {nome:...}. Aqui usamos brace-counting pra delimitar
+    o bloco do vendedor e fazer substituicoes locais.
+    """
+    bounds = _find_section_bounds(p.html, 'insights')
+    if not bounds:
+        return
+    sec_start, sec_end = bounds
+    section = p.html[sec_start:sec_end]
+
+    # Acha o "Nome": { dentro da secao com brace counting
+    km = re.search(r'"' + re.escape(nome) + r'":\s*\{', section)
+    if not km:
+        p.changes.append((f'insights {nome}', '(bloco não encontrado)', '(skip)'))
+        return
+    blk_start = km.end() - 1  # '{'
+    depth = 0
+    blk_end = None
+    for i in range(blk_start, len(section)):
+        c = section[i]
+        if c == '{': depth += 1
+        elif c == '}':
+            depth -= 1
+            if depth == 0:
+                blk_end = i + 1
+                break
+    if blk_end is None:
+        return
+    block = section[blk_start:blk_end]
+
+    def esc(s):
+        return (s or '').replace('\\', '\\\\').replace('"', '\\"')
+
+    # novos = top_clientes (ate 5)
     novos = vd['top_clientes'][:5]
     novos_js = '[\n        ' + ',\n        '.join(
-        f'{{nome:"{k}", valor:{v:g}}}' for k,v in novos
+        f'{{nome:"{esc(k)}", valor:{v:g}}}' for k,v in novos
     ) + '\n      ]'
+    new_block = re.sub(r'novos:\s*\[[^\]]*\]', 'novos: ' + novos_js.replace('\\','\\\\'),
+                       block, count=1, flags=re.DOTALL)
+    # Workaround: re.sub interpreta \1 etc em replacement string; usamos lambda
+    new_block = re.sub(r'novos:\s*\[[^\]]*\]', lambda _: f'novos: {novos_js}',
+                       block, count=1, flags=re.DOTALL)
 
-    # concentracao = top cliente com pct = topvalor/total*100
+    # concentracao
     if vd['top_clientes']:
         topc, topv = vd['top_clientes'][0]
         pct = topv / max(vd['fat'], 1) * 100
-        conc_js = f'{{nome:"{topc}", pct:{pct:.1f}}}'
+        conc_js = f'{{nome:"{esc(topc)}", pct:{pct:.1f}}}'
     else:
         conc_js = 'null'
-
-    # Substitui campos
-    novos_old = m.group(1)
-    p.html = p.html.replace(novos_old, f'novos: {novos_js}')
-
-    conc_old = m.group(2)
-    p.html = p.html.replace(conc_old, f'concentracao: {conc_js}')
+    new_block = re.sub(r'concentracao:\s*(\{[^}]*\}|null)',
+                       lambda _: f'concentracao: {conc_js}',
+                       new_block, count=1)
 
     # clientes_maio
-    p.html = re.sub(
-        r'(\b'+re.escape(nome)+r'\b[^}]*?clientes_maio:\s*)\d+',
-        lambda mm: mm.group(1) + str(vd['clientes']),
-        p.html,
-        count=1,
-        flags=re.DOTALL
-    )
+    new_block = re.sub(r'clientes_maio:\s*\d+',
+                       f'clientes_maio: {vd["clientes"]}',
+                       new_block, count=1)
 
-    p.changes.append((f'insights {nome}', f'clientes_maio={vd["clientes"]} novos={len(novos)}', 'OK'))
+    # Aplica no html
+    section_new = section[:blk_start] + new_block + section[blk_end:]
+    p.html = p.html[:sec_start] + section_new + p.html[sec_end:]
+    p.changes.append((f'insights {nome}',
+                      f'clientes={vd["clientes"]} novos={len(novos)} pct={pct if vd["top_clientes"] else 0:.1f}',
+                      'OK'))
 
 
 def patch_extras(p, agg, mes_ant_val, mes_ant_nome):
