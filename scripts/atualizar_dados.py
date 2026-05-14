@@ -162,6 +162,11 @@ def aggregate(items):
         'por_dia':defaultdict(float),
         'vendas_acumuladas':{},  # {sale_id: {data, cliente, valor}}
     })
+    # Sales aggregation (pra calcular venda_destaque)
+    sales_agg = defaultdict(lambda: {
+        'data': None, 'cliente': '', 'vendor': '', 'valor': 0.0,
+        'top_produto': defaultdict(float),
+    })
 
     for it in items:
         v = VENDOR_FULL_NAMES.get(it['vendor'])
@@ -184,6 +189,13 @@ def aggregate(items):
                 'data': it['data'], 'cliente': it['cliente'], 'valor': 0
             }
         pv['vendas_acumuladas'][sale_id]['valor'] += it['valor']
+        # Acumula tambem no sales_agg geral (pra venda_destaque)
+        sa = sales_agg[sale_id]
+        sa['data'] = it['data']
+        sa['cliente'] = it['cliente']
+        sa['vendor'] = v
+        sa['valor'] += it['valor']
+        sa['top_produto'][it['produto']] += it['valor']
         if it['categoria'] in ABC_CATS:
             pv['abc'] += it['valor']
 
@@ -197,11 +209,32 @@ def aggregate(items):
     last_data_date = datetime(ano, mes, dias_passados)
     viewing_date = last_data_date + timedelta(days=1)
 
+    # ----- Venda destaque: maior venda do ultimo dia com vendas -----
+    venda_destaque = None
+    if sales_agg:
+        last_day = max(s['data'].date() for s in sales_agg.values())
+        sales_last = [s for s in sales_agg.values() if s['data'].date() == last_day]
+        if sales_last:
+            top_sale = max(sales_last, key=lambda s: s['valor'])
+            top_prod = max(top_sale['top_produto'].items(), key=lambda kv: kv[1])[0] if top_sale['top_produto'] else ''
+            parts = top_prod.split(' - ')
+            prod_nome = parts[0].strip() if parts else top_prod
+            prod_marca = parts[-1].strip() if len(parts) > 1 else ''
+            venda_destaque = {
+                'data': top_sale['data'].strftime('%d/%m'),
+                'cliente': top_sale['cliente'],
+                'valor': round(top_sale['valor'], 2),
+                'vendedor': top_sale['vendor'],
+                'produto_top': prod_nome,
+                'produto_top_marca': prod_marca,
+            }
+
     out = {
         'ano': ano,
         'mes': mes,
         'mes_nome': MES_NOME_PT[mes],
         'mes_abrev': MES_ABREV_PT[mes],
+        'venda_destaque': venda_destaque,
         # Timestamp da geracao em horario de Manaus (UTC-4)
         'atualizado_em': datetime.now(MANAUS_TZ).strftime('%d/%m %H:%M'),
         # D.hoje = data de exibicao na TV (dia apos o ultimo registro)
@@ -375,7 +408,94 @@ def _find_section_bounds(html, section_name):
     return None
 
 
-def patch_vendedor(p, nome, vd, meta_global, dias_total=31, dias_passados=1):
+def parse_historico_total_anterior(html, ano, mes):
+    """Le D.historico_total e retorna (valor_mes_anterior, nome_mes_anterior)."""
+    if mes == 1:
+        ano_ant, mes_ant = ano - 1, 12
+    else:
+        ano_ant, mes_ant = ano, mes - 1
+    mes_str = f'{ano_ant:04d}-{mes_ant:02d}'
+    m = re.search(r'\{mes:"' + mes_str + r'",vlr_bruto:([\d.]+)', html)
+    val = float(m.group(1)) if m else 0.0
+    return val, MES_NOME_PT[mes_ant].capitalize()
+
+
+def parse_historico_max_per_vendor(html, ano_atual, mes_atual):
+    """Le D.historico_vendedor[*] e retorna {nome: max_vlr_bruto} excluindo o mes atual (projecao)."""
+    out = {}
+    mes_atual_str = f'{ano_atual:04d}-{mes_atual:02d}'
+    for nome in VENDOR_FULL_NAMES.values():
+        pattern = re.compile(r'"' + re.escape(nome) + r'":\s*\[(.*?)\]', re.DOTALL)
+        m = pattern.search(html)
+        if not m:
+            out[nome] = 0
+            continue
+        body = m.group(1)
+        # Cada entrada: {mes:"YYYY-MM",vlr_bruto:N[,projecao:true]}
+        entries = re.findall(r'\{mes:"([^"]+)",vlr_bruto:([\d.]+)(?:,projecao:(true|false))?\}', body)
+        # Exclui o mes atual (proj) — usa so meses fechados
+        valid = [float(v) for (m_str, v, proj) in entries
+                 if m_str != mes_atual_str and proj != 'true']
+        out[nome] = max(valid) if valid else 0
+    return out
+
+
+def _compute_badges(vd, meta_global, dias_passados, dias_total, historic_max):
+    """Calcula lista de badges pra um vendedor.
+    Formato: ['recorde'] | ['streak', N] | ['acima'] | ['abaixo']
+    Maximo de 4 mas a UI corta em 2 com prioridade RECORDE > STREAK > ACIMA/ABAIXO.
+    """
+    badges = []
+    fat = vd.get('fat', 0) or 0
+
+    # 1. RECORDE: total do mes atual maior que o maior mes fechado historico
+    if historic_max > 0 and fat > historic_max:
+        badges.append(['recorde'])
+
+    # 2. STREAK: dias consecutivos com venda terminando no ultimo dia com dados.
+    # `por_dia` tem chaves DD/MM — como aggregate filtra so o mes atual,
+    # podemos comparar so o DIA (DD).
+    por_dia = vd.get('por_dia', {}) or {}
+    dias_com_venda = sorted(
+        {int(d.split('/')[0]) for d, v in por_dia.items() if v > 0}
+    )
+    streak = 0
+    if dias_com_venda:
+        streak = 1
+        for i in range(len(dias_com_venda) - 1, 0, -1):
+            if dias_com_venda[i] - dias_com_venda[i-1] == 1:
+                streak += 1
+            else:
+                break
+    if streak >= 5:
+        badges.append(['streak', streak])
+
+    # 3. ACIMA / ABAIXO: ritmo proporcional vs meta
+    if meta_global and dias_passados > 0 and dias_total > 0:
+        ritmo_esperado = meta_global / dias_total * dias_passados
+        if ritmo_esperado > 0:
+            ratio = fat / ritmo_esperado
+            if ratio > 1.2:
+                badges.append(['acima'])
+            elif ratio < 0.6:
+                badges.append(['abaixo'])
+
+    return badges
+
+
+def badges_to_js(badges):
+    """Converte lista de badges em literal JS compacto."""
+    parts = []
+    for b in badges:
+        if isinstance(b, list):
+            inner = ','.join(f'"{x}"' if isinstance(x, str) else str(x) for x in b)
+            parts.append(f'[{inner}]')
+        else:
+            parts.append(f'"{b}"')
+    return '[' + ','.join(parts) + ']'
+
+
+def patch_vendedor(p, nome, vd, meta_global, dias_total=31, dias_passados=1, historic_max=0):
     """Atualiza a entrada de um vendedor DENTRO do bloco `vendedores: {...}`.
     Robusto a variacoes no formato do bloco."""
     bounds = _find_section_bounds(p.html, 'vendedores')
@@ -429,13 +549,17 @@ def patch_vendedor(p, nome, vd, meta_global, dias_total=31, dias_passados=1):
         )
     ultimas_js = '[' + ','.join(ult_parts) + ']'
 
+    # Badges
+    badges = _compute_badges(vd, meta_global, dias_passados, dias_total, historic_max)
+    badges_js = badges_to_js(badges)
+
     new_block = (
         f'"{nome}": {{\n'
         f'      fat_maio: {vd["fat"]:g}, fat_abc: {vd["fat_abc"]:g}, '
         f'pedidos: {vd["pedidos"]}, clientes: {vd["clientes"]}, '
         f'ticket_medio: {vd["ticket_medio"]:g}, ticket_abril: {ticket_abril}, ticket_trend: {ticket_trend},\n'
         f'      pct_meta: {pct_meta:.1f}, projecao: {proj_v:.2f}, '
-        f'fat_abril: {fat_abril}, pedidos_abril: {pedidos_abril},\n'
+        f'fat_abril: {fat_abril}, pedidos_abril: {pedidos_abril}, badges: {badges_js},\n'
         f'      por_dia: {por_dia_js},\n'
         f'      ultimas_vendas: {ultimas_js},\n'
         f'      top_clientes: {js_array_of_pairs(vd["top_clientes"])},\n'
@@ -504,6 +628,79 @@ def patch_insights(p, nome, vd):
     )
 
     p.changes.append((f'insights {nome}', f'clientes_maio={vd["clientes"]} novos={len(novos)}', 'OK'))
+
+
+def patch_extras(p, agg, mes_ant_val, mes_ant_nome):
+    """Patcha os campos novos: mes_anterior_total, mes_anterior_nome, venda_destaque,
+    mes_nome_atual, ano_atual."""
+    # mes_anterior_total
+    if re.search(r'mes_anterior_total:\s*[\d.]+', p.html):
+        p.replace(
+            r'mes_anterior_total:\s*[\d.]+',
+            f'mes_anterior_total: {mes_ant_val:.2f}',
+            'mes_anterior_total'
+        )
+    else:
+        # primeira execucao — injeta depois de total_maio
+        p.html = re.sub(
+            r'(total_(?:maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|janeiro|fevereiro|marco|abril):\s*[\d.]+,)',
+            lambda m: m.group(1) + f'\n  mes_anterior_total: {mes_ant_val:.2f},\n  mes_anterior_nome: "{mes_ant_nome}",',
+            p.html,
+            count=1
+        )
+        p.changes.append(('mes_anterior_total (inserido)', '', f'{mes_ant_val:.2f}'))
+
+    if re.search(r'mes_anterior_nome:\s*"[^"]*"', p.html):
+        p.replace(
+            r'mes_anterior_nome:\s*"[^"]*"',
+            f'mes_anterior_nome: "{mes_ant_nome}"',
+            'mes_anterior_nome'
+        )
+
+    # mes_nome_atual + ano_atual (campos novos pro hero)
+    mes_atual_capit = MES_NOME_PT[agg['mes']].capitalize().replace('Marco','Março')
+    if re.search(r'mes_nome_atual:\s*"[^"]*"', p.html):
+        p.replace(r'mes_nome_atual:\s*"[^"]*"', f'mes_nome_atual: "{mes_atual_capit}"', 'mes_nome_atual')
+    else:
+        p.html = re.sub(
+            r'(mes_anterior_nome:\s*"[^"]*",)',
+            lambda m: m.group(1) + f'\n  mes_nome_atual: "{mes_atual_capit}",\n  ano_atual: {agg["ano"]},',
+            p.html,
+            count=1
+        )
+        p.changes.append(('mes_nome_atual (inserido)', '', mes_atual_capit))
+    if re.search(r'ano_atual:\s*\d+', p.html):
+        p.replace(r'ano_atual:\s*\d+', f'ano_atual: {agg["ano"]}', 'ano_atual')
+
+    # venda_destaque (objeto ou null)
+    vd = agg.get('venda_destaque')
+    def esc(s):
+        return (s or '').replace('\\', '\\\\').replace('"', '\\"')
+    if vd:
+        vd_js = (
+            f'{{ data: "{vd["data"]}", cliente: "{esc(vd["cliente"])}", '
+            f'valor: {vd["valor"]:g}, vendedor: "{esc(vd["vendedor"])}", '
+            f'produto_top: "{esc(vd["produto_top"])}", '
+            f'produto_top_marca: "{esc(vd["produto_top_marca"])}" }}'
+        )
+    else:
+        vd_js = 'null'
+    # tenta substituir; se nao existir o campo no HTML, inserir
+    if re.search(r'venda_destaque:\s*(\{[^}]*\}|null)', p.html):
+        p.replace(
+            r'venda_destaque:\s*(\{[^}]*\}|null)',
+            f'venda_destaque: {vd_js}',
+            'venda_destaque'
+        )
+    else:
+        # injeta depois de projecao:
+        p.html = re.sub(
+            r'(projecao:\s*[\d.]+,?\n)',
+            lambda m: m.group(1) + f'  venda_destaque: {vd_js},\n',
+            p.html,
+            count=1
+        )
+        p.changes.append(('venda_destaque (inserido)', '', vd_js[:60] + '...'))
 
 
 def patch_historico_projecao(p, agg):
@@ -613,13 +810,22 @@ def main():
     before_total = re.search(r'total_\w+:\s*([\d.]+)', p.html)
     before_total = float(before_total.group(1)) if before_total else 0
 
+    # ----- Le contexto historico do HTML antes de patchar -----
+    mes_ant_val, mes_ant_nome = parse_historico_total_anterior(p.html, agg['ano'], agg['mes'])
+    historic_max = parse_historico_max_per_vendor(p.html, agg['ano'], agg['mes'])
+    print(f'  Mes anterior ({mes_ant_nome}): {fmt_brl(mes_ant_val)}')
+    print(f'  Historic max por vendedor: {historic_max}')
+    print()
+
     # 1) globais
     patch_global(p, agg)
+    patch_extras(p, agg, mes_ant_val, mes_ant_nome)
 
     # 2) por vendedor (patch_vendedor ja calcula+escreve a projecao individual)
     for nome, vd in agg['vendedores'].items():
         meta = get_meta_global(p.html, nome)
-        patch_vendedor(p, nome, vd, meta, agg['dias_corridos_total'], agg['dias_corridos_passados'])
+        hmax = historic_max.get(nome, 0)
+        patch_vendedor(p, nome, vd, meta, agg['dias_corridos_total'], agg['dias_corridos_passados'], hmax)
         patch_insights(p, nome, vd)
 
     # 3) zera vendedores SEM dados (mantem historico mas zera fat_maio/pedidos)
@@ -629,7 +835,8 @@ def main():
         # vendedor nao teve venda -> zera
         zero = {'fat':0,'fat_abc':0,'pedidos':0,'clientes':0,'itens':0,'ticket_medio':0,
                 'top_clientes':[],'top_produtos':[]}
-        patch_vendedor(p, nome_full, zero, get_meta_global(p.html, nome_full), agg['dias_corridos_total'], agg['dias_corridos_passados'])
+        patch_vendedor(p, nome_full, zero, get_meta_global(p.html, nome_full),
+                       agg['dias_corridos_total'], agg['dias_corridos_passados'], 0)
 
     # 4) atualiza ponto de projecao no historico
     patch_historico_projecao(p, agg)
