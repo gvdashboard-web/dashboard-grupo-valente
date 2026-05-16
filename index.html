@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard TV — Grupo Valente</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1835,6 +1835,7 @@ const chartDefaults = {
 };
 
 function initT6() {
+  if (typeof Chart === 'undefined') { console.warn('Chart.js nao carregou — pulando initT6'); return; }
   const labels = D.historico_total.map(h => mesLabel(h.mes));
   const totais = D.historico_total.map(h => h.vlr_bruto);
   const meta = D.meta_empresa;
@@ -1947,6 +1948,7 @@ function initT6() {
 }
 
 function initT7() {
+  if (typeof Chart === 'undefined') { console.warn('Chart.js nao carregou — pulando initT7'); return; }
   const labels = D.historico_total.map(h => mesLabel(h.mes));
   const n = labels.length;
   const getHist = nome => {
@@ -2438,7 +2440,8 @@ renderBadges('Róger Silva', 't4-badges');
 renderBadges('Lucas de Mello Valente', 't5-badges');
 renderBadges('Jalena', 't6-badges');
 initT9();
-setTimeout(() => { initT6(); initT7(); }, 100);
+setTimeout(() => { try { initT6(); } catch(e){ console.error('initT6 falhou:', e); }
+                   try { initT7(); } catch(e){ console.error('initT7 falhou:', e); } }, 100);
 startTimer();
 
 // Data em tempo real + "Atualizado em" em TODAS as telas
