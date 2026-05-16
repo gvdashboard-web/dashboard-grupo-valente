@@ -324,6 +324,7 @@ def aggregate(items):
     por_v = defaultdict(lambda: {
         'total':0.0,'abc':0.0,'pedidos':set(),'clientes':set(),'itens':0,
         'top_clientes':defaultdict(float),'top_produtos':defaultdict(float),
+        'top_marcas':defaultdict(float),
         'por_dia':defaultdict(float),
         'vendas_acumuladas':{},  # {sale_id: {data, cliente, valor}}
     })
@@ -346,6 +347,10 @@ def aggregate(items):
         pv['clientes'].add(it['cliente']); pv['itens'] += int(it['qtd'])
         pv['top_clientes'][it['cliente']] += it['valor']
         pv['top_produtos'][it['produto']] += it['valor']
+        # Marca = último segmento após " - " no nome do produto
+        prod_nome = it['produto'] or ''
+        marca = prod_nome.split(' - ')[-1].strip() if ' - ' in prod_nome else 'OUTROS'
+        pv['top_marcas'][marca] += it['valor']
         pv['por_dia'][d] += it['valor']
         # Acumula vendas individuais por sale_id
         sale_id = it['sale']
@@ -441,6 +446,8 @@ def aggregate(items):
                                    key=lambda x:-x[1])[:8],
             'top_produtos': sorted([[k,round(v,2)] for k,v in d['top_produtos'].items()],
                                    key=lambda x:-x[1])[:8],
+            'top_marcas': sorted([[k,round(v,2)] for k,v in d['top_marcas'].items()],
+                                 key=lambda x:-x[1])[:5],
             'por_dia': {k:round(v,2) for k,v in sorted(d['por_dia'].items())},
             'ultimas_vendas': ultimas,
         }
@@ -728,7 +735,8 @@ def patch_vendedor(p, nome, vd, meta_global, dias_total=31, dias_passados=1, his
         f'      por_dia: {por_dia_js},\n'
         f'      ultimas_vendas: {ultimas_js},\n'
         f'      top_clientes: {js_array_of_pairs(vd["top_clientes"])},\n'
-        f'      top_produtos: {js_array_of_pairs(vd["top_produtos"])}\n'
+        f'      top_produtos: {js_array_of_pairs(vd["top_produtos"])},\n'
+        f'      top_marcas: {js_array_of_pairs(vd.get("top_marcas", []))}\n'
         f'    }}'
     )
 
@@ -1064,7 +1072,7 @@ def main():
             continue
         # vendedor nao teve venda -> zera
         zero = {'fat':0,'fat_abc':0,'pedidos':0,'clientes':0,'itens':0,'ticket_medio':0,
-                'top_clientes':[],'top_produtos':[]}
+                'top_clientes':[],'top_produtos':[],'top_marcas':[]}
         patch_vendedor(p, nome_full, zero, get_meta_global(p.html, nome_full),
                        agg['dias_corridos_total'], agg['dias_corridos_passados'], 0)
 
