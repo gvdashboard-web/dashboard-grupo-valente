@@ -640,9 +640,9 @@ def _compute_badges(vd, meta_global, dias_passados, dias_total, historic_max):
         ritmo_esperado = meta_global / dias_total * dias_passados
         if ritmo_esperado > 0:
             ratio = fat / ritmo_esperado
-            if ratio > 1.2:
+            if ratio > 1.15:
                 badges.append(['acima'])
-            elif ratio < 0.6:
+            elif ratio < 0.7:
                 badges.append(['abaixo'])
 
     return badges
