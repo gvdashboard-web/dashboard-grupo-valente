@@ -1651,15 +1651,43 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
       <div class="vend-card" style="border-color:${accentColor}33;flex:0">
         <div class="vend-card-title">Faturamento Maio</div>
         <div class="vend-fat-big" style="color:${accentColor}">${fmtK(v.fat_maio)}</div>
-        ${meta.global ? `
-          <div style="margin-top:12px">
-            <div class="progress-track"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${accentColor}"></div></div>
-            <div style="display:flex;justify-content:space-between;margin-top:8px">
-              <span style="font-size:13px;color:var(--muted)">${(pct).toFixed(1).replace('.',',')}% da meta</span>
-              <span style="font-size:13px;color:var(--muted)">${fmt(meta.global)}</span>
+        ${meta.global ? (() => {
+          const falta = Math.max(0, meta.global - v.fat_maio);
+          const diasRest = D.dias_corridos_restantes || 1;
+          const diasPass = D.dias_corridos_passados || 1;
+          const rPorDia = diasRest > 0 ? falta / diasRest : 0;
+          const ritmoAtual = v.fat_maio / Math.max(diasPass, 1);
+          const noRitmo = ritmoAtual >= rPorDia;
+          const bateu = v.fat_maio >= meta.global;
+          return `
+            <div style="margin-top:12px">
+              <div class="progress-track"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${accentColor}"></div></div>
+              <div style="display:flex;justify-content:space-between;margin-top:8px">
+                <span style="font-size:13px;color:var(--muted)">${(pct).toFixed(1).replace('.',',')}% da meta</span>
+                <span style="font-size:13px;color:var(--muted)">${fmt(meta.global)}</span>
+              </div>
+              ${bateu ? `
+                <div style="margin-top:12px;padding:10px 12px;background:rgba(34,197,94,0.10);border:1px solid rgba(74,222,128,0.30);border-radius:8px;text-align:center">
+                  <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;color:var(--green);text-transform:uppercase">🎯 Meta batida</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">+${fmtK(v.fat_maio - meta.global)} acima</div>
+                </div>
+              ` : `
+                <div style="margin-top:12px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div>
+                    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase">Falta vender</div>
+                    <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;line-height:1;color:${noRitmo?'var(--green)':'var(--gold)'};margin-top:2px">${fmtK(rPorDia)}<span style="font-size:11px;color:var(--muted);font-family:Inter;font-weight:500;margin-left:3px">/dia</span></div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-size:10px;color:var(--muted);letter-spacing:1px">${diasRest} dias rest.</div>
+                    <div style="font-size:11px;color:${noRitmo?'var(--green)':'var(--red)'};font-weight:700;margin-top:2px">
+                      ${noRitmo ? '▲ no ritmo' : '▼ acelerar'}
+                    </div>
+                  </div>
+                </div>
+              `}
             </div>
-          </div>
-        ` : '<div style="font-size:13px;color:var(--muted);margin-top:8px">Sem meta definida</div>'}
+          `;
+        })() : '<div style="font-size:13px;color:var(--muted);margin-top:8px">Sem meta definida</div>'}
       </div>
       <div class="vend-card" style="flex:0">
         <div class="vend-card-title">Últimos 3 dias</div>
