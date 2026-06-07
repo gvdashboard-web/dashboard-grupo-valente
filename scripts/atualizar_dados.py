@@ -910,6 +910,34 @@ def patch_extras(p, agg, mes_ant_val, mes_ant_nome):
         p.changes.append(('venda_destaque (inserido)', '', vd_js[:60] + '...'))
 
 
+def roll_historico_se_virou_mes(p, agg):
+    """Quando o mes muda (ex: maio -> junho), o ponto com 'projecao:true' anterior
+    vira ponto fechado (mantem o vlr_bruto, que ja eh o real do mes fechado) e
+    um novo ponto eh inserido pro mes atual com vlr_bruto:0,projecao:true.
+
+    O patch_historico_projecao seguinte vai patchear o valor do novo ponto.
+
+    Idempotente: se ja tem ponto do mes atual, nao faz nada.
+    """
+    ano, mes = agg['ano'], agg['mes']
+    mes_str_atual = f'{ano:04d}-{mes:02d}'
+
+    # Ja existe algum ponto do mes atual? (em qualquer array) -> nada a rolar
+    if re.search(r'\{mes:"' + mes_str_atual + r'",vlr_bruto:[\d.]+(?:,projecao:(?:true|false))?\}', p.html):
+        return
+
+    # Pra cada {mes:"YYYY-MM",vlr_bruto:X,projecao:true} antigo:
+    # - tira o ",projecao:true" do ponto (vira fechado)
+    # - injeta {mes:"<atual>",vlr_bruto:0,projecao:true} logo depois
+    pattern = re.compile(r'\{(mes:"\d{4}-\d{2}",vlr_bruto:[\d.]+),projecao:true\}')
+    def converter(m):
+        return '{' + m.group(1) + '},{mes:"' + mes_str_atual + '",vlr_bruto:0,projecao:true}'
+    novo_html, n = pattern.subn(converter, p.html)
+    if n > 0:
+        p.html = novo_html
+        p.changes.append(('historico roll', '', f'{n} ponto(s) rolled pra {mes_str_atual}'))
+
+
 def patch_historico_projecao(p, agg):
     """Atualiza o ULTIMO ponto de historico_total/historico_vendedor se for projecao.
     Mantem todos os pontos anteriores intactos."""
@@ -1077,6 +1105,8 @@ def main():
                        agg['dias_corridos_total'], agg['dias_corridos_passados'], 0)
 
     # 4) atualiza ponto de projecao no historico
+    #    rola o ponto antes pra criar slot do mes atual se virou o mes
+    roll_historico_se_virou_mes(p, agg)
     patch_historico_projecao(p, agg)
 
     p.write()
