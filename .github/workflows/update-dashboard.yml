@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 # Serializa runs concorrentes pra evitar race condition no refresh_token.
 # Conta Azul invalida o token a cada uso — se 2 jobs leem o mesmo refresh_token
@@ -42,6 +43,9 @@ jobs:
           CA_CLIENT_ID: ${{ secrets.CA_CLIENT_ID }}
           CA_CLIENT_SECRET: ${{ secrets.CA_CLIENT_SECRET }}
           CA_REFRESH_TOKEN: ${{ secrets.CA_REFRESH_TOKEN }}
+          # ca_client persiste o refresh_token rotacionado direto no secret
+          # (inline, no momento da rotacao) — nao depende do step Persistir.
+          SECRETS_PAT: ${{ secrets.SECRETS_PAT }}
         run: |
           cd "${GITHUB_WORKSPACE}"
           python3 scripts/atualizar_dados.py \
@@ -75,3 +79,41 @@ jobs:
             git push
             echo "Commit feito!"
           fi
+
+      # Alerta visivel quando o dashboard quebra: abre UMA issue (sem spam) e
+      # fecha automaticamente quando o workflow volta a passar.
+      - name: Abrir issue se falhou
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          AUTH="Authorization: Bearer $GH_TOKEN"
+          # ja existe issue aberta de falha?
+          N=$(curl -s -H "$AUTH" "$API/issues?state=open&labels=dashboard-down" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d))')
+          if [ "$N" = "0" ]; then
+            curl -s -X POST -H "$AUTH" "$API/labels" -d '{"name":"dashboard-down","color":"d73a4a"}' > /dev/null || true
+            curl -s -X POST -H "$AUTH" "$API/issues" -d "{
+              \"title\": \"🔴 Dashboard parou de atualizar\",
+              \"labels\": [\"dashboard-down\"],
+              \"body\": \"O workflow de atualizacao falhou.\n\nRun: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\n\nCausa mais comum: refresh_token da Conta Azul invalido (invalid_grant) — requer re-autorizacao OAuth.\n\nEsta issue fecha sozinha quando o workflow voltar a passar.\"
+            }" > /dev/null
+            echo "Issue de falha aberta"
+          else
+            echo "Issue de falha ja existe — sem spam"
+          fi
+
+      - name: Fechar issue de falha se passou
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          AUTH="Authorization: Bearer $GH_TOKEN"
+          curl -s -H "$AUTH" "$API/issues?state=open&labels=dashboard-down" | \
+            python3 -c 'import json,sys; [print(i["number"]) for i in json.load(sys.stdin)]' | \
+            while read -r NUM; do
+              curl -s -X PATCH -H "$AUTH" "$API/issues/$NUM" -d '{"state":"closed"}' > /dev/null
+              curl -s -X POST -H "$AUTH" "$API/issues/$NUM/comments" -d '{"body":"✅ Workflow voltou a passar — dashboard atualizando normalmente."}' > /dev/null
+              echo "Issue #$NUM fechada"
+            done
