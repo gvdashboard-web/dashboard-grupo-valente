@@ -407,6 +407,8 @@ def aggregate(items):
         'venda_destaque': venda_destaque,
         # Timestamp da geracao em horario de Manaus (UTC-4)
         'atualizado_em': datetime.now(MANAUS_TZ).strftime('%d/%m %H:%M'),
+        # ISO com offset — usado pelo banner de "dados desatualizados" no dash
+        'atualizado_em_iso': datetime.now(MANAUS_TZ).strftime('%Y-%m-%dT%H:%M:%S-04:00'),
         # D.hoje = data de exibicao na TV (dia apos o ultimo registro)
         'hoje': viewing_date.strftime('%Y-%m-%d'),
         # dias_corridos_passados = dias com dados (base da projecao e do ritmo)
@@ -504,6 +506,20 @@ def patch_global(p, agg):
         f'atualizado_em: "{agg["atualizado_em"]}"',
         'atualizado_em'
     )
+    # atualizado_em_iso — insere apos atualizado_em na primeira execucao
+    if re.search(r'atualizado_em_iso:\s*"[^"]*"', p.html):
+        p.replace(
+            r'atualizado_em_iso:\s*"[^"]*"',
+            f'atualizado_em_iso: "{agg["atualizado_em_iso"]}"',
+            'atualizado_em_iso'
+        )
+    else:
+        p.html = re.sub(
+            r'(atualizado_em:\s*"[^"]*",)',
+            lambda m: m.group(1) + f'\n  atualizado_em_iso: "{agg["atualizado_em_iso"]}",',
+            p.html, count=1
+        )
+        p.changes.append(('atualizado_em_iso (inserido)', '', agg['atualizado_em_iso']))
     p.replace(
         r'dias_corridos_passados:\s*\d+',
         f'dias_corridos_passados: {agg["dias_corridos_passados"]}',
