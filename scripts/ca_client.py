@@ -114,7 +114,26 @@ class ContaAzulClient:
             self.refresh_token = tokens['refresh_token']
             cred_set('CA_REFRESH_TOKEN', 'contaazul-refresh-token', self.refresh_token)
             if IS_CI:
-                # Em CI: escreve no GITHUB_ENV pra o proximo step poder atualizar o secret
+                # O token NUNCA pode aparecer em log: o repo e publico e refresh
+                # token vazado + usado por terceiro revoga a familia toda no
+                # Cognito (invalid_grant em loop). ::add-mask:: cobre qualquer
+                # ocorrencia futura no log, inclusive o display de env de steps.
+                print(f'::add-mask::{self.refresh_token}')
+                sys.stdout.flush()
+
+                # Persiste o secret JA, sem depender de step posterior do
+                # workflow — se o job crashar depois daqui o secret ja esta novo.
+                pat = os.environ.get('SECRETS_PAT')
+                repo = os.environ.get('GITHUB_REPOSITORY')
+                if pat and repo:
+                    try:
+                        from update_github_secret import update_secret
+                        update_secret(pat, repo, 'CA_REFRESH_TOKEN', self.refresh_token)
+                        print('[ca_client] Secret CA_REFRESH_TOKEN atualizado (inline)', file=sys.stderr)
+                    except Exception as e:
+                        print(f'[ca_client] AVISO: persist inline falhou: {e}', file=sys.stderr)
+
+                # Fallback: GITHUB_ENV pro step "Persistir" do workflow
                 github_env = os.environ.get('GITHUB_ENV')
                 if github_env:
                     with open(github_env, 'a') as f:
