@@ -998,7 +998,7 @@
   <div class="hero-wrap">
     <div class="date-display"></div>
     <div class="hero-logo">GRUPO VALENTE</div>
-    <div class="hero-label" id="t0-label">Faturamento · Maio 2026</div>
+    <div class="hero-label" id="t0-label">Faturamento</div>
     <div class="hero-fat" id="t0-fat">R$ 0</div>
     <div class="hero-delta" id="t0-delta"></div>
     <div class="hero-foot" id="t0-foot"></div>
@@ -1010,7 +1010,7 @@
   <div class="header">
     <div class="header-left">
       <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Visão Geral · Maio 2026</div>
+      <div class="screen-label" id="t1-screen-label">Visão Geral</div>
     </div>
     <div class="header-right">
       <div class="date-display" id="t1-date"></div>
@@ -1023,7 +1023,7 @@
       <div class="kpi-row">
         <!-- Lado esquerdo: Faturamento -->
         <div>
-          <div class="kpi-label">Faturamento Maio</div>
+          <div class="kpi-label" id="t1-fat-label">Faturamento</div>
           <div class="fat-value" id="t1-fat">R$ 0</div>
           <div class="meta-info" id="t1-dias" style="margin-top:6px;">— de — dias corridos</div>
         </div>
@@ -1097,7 +1097,7 @@
   <div class="header">
     <div class="header-left">
       <div class="logo">GRUPO VALENTE</div>
-      <div class="screen-label">Ranking de Vendedores · Maio 2026</div>
+      <div class="screen-label" id="t2-screen-label">Ranking de Vendedores</div>
     </div>
     <div class="header-right">
       <div class="date-display" id="t2-date"></div>
@@ -1410,6 +1410,28 @@ const mesLabel = m => {const [y,mo]=m.split('-');const ns=['','Jan','Fev','Mar',
 const vColors = {'Erivan Lima':'#3b82f6','Róger Silva':'#fb923c','Lucas de Mello Valente':'#22c55e','Jalena':'#ec4899'};
 const vShort = {'Erivan Lima':'Erivan','Róger Silva':'Róger','Lucas de Mello Valente':'Grupo Valente','Jalena':'Jalena'};
 
+// ----- Labels de mes DINAMICOS — seguem o D{}, nunca hardcode.
+// (Os campos do D continuam com nomes legados tipo total_maio/fat_abril,
+//  mas carregam SEMPRE mes atual / mes anterior; so o display muda.)
+const MES_ATUAL = D.mes_nome_atual || '—';
+const MES_ANT = D.mes_anterior_nome || '—';
+const ANO_ATUAL = D.ano_atual || new Date().getFullYear();
+const ANO_MES_ANT = (() => { const [y,m]=(D.hoje||'').split('-').map(Number); return m===1 ? y-1 : y; })();
+const DIAS_MES_ANT = (() => { const [y,m]=(D.hoje||'').split('-').map(Number); return y ? new Date(y, m-1, 0).getDate() : 30; })();
+const TEND_LABEL = (() => {
+  const [y,m]=(D.hoje||'').split('-').map(Number);
+  if (!y) return '';
+  const ab=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return [3,2,1].map(k => ab[((m-1-k)%12+12)%12]).join('·');
+})();
+// Aplica nos labels estaticos (o HTML acima ja foi parseado neste ponto)
+(function(){
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  set('t1-screen-label', 'Visão Geral · ' + MES_ATUAL + ' ' + ANO_ATUAL);
+  set('t2-screen-label', 'Ranking de Vendedores · ' + MES_ATUAL + ' ' + ANO_ATUAL);
+  set('t1-fat-label', 'Faturamento ' + MES_ATUAL);
+})();
+
 function initT1() {
   const pct = D.total_maio / D.meta_empresa * 100;
   document.getElementById('t1-fat').textContent = fmtK(D.total_maio);
@@ -1652,7 +1674,7 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
   container.innerHTML = `
     <div class="vend-col">
       <div class="vend-card" style="border-color:${accentColor}33;flex:0">
-        <div class="vend-card-title">Faturamento Maio</div>
+        <div class="vend-card-title">Faturamento ${MES_ATUAL}</div>
         <div class="vend-fat-big" style="color:${accentColor}">${fmtK(v.fat_maio)}</div>
         ${meta.global ? (() => {
           const falta = Math.max(0, meta.global - v.fat_maio);
@@ -1720,15 +1742,15 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
           <div class="kpi-mini" style="grid-column:span 3;background:transparent;padding:0">
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
               <div class="kpi-mini">
-                <div class="kpi-mini-label">Ticket Maio</div>
+                <div class="kpi-mini-label">Ticket ${MES_ATUAL}</div>
                 <div class="kpi-mini-val" style="color:${accentColor}">${v.ticket_medio > 0 ? fmtK(v.ticket_medio) : '—'}</div>
               </div>
               <div class="kpi-mini">
-                <div class="kpi-mini-label">Ticket Abril</div>
+                <div class="kpi-mini-label">Ticket ${MES_ANT}</div>
                 <div class="kpi-mini-val" style="color:var(--muted)">${fmtK(v.ticket_abril)}</div>
               </div>
               <div class="kpi-mini">
-                <div class="kpi-mini-label">Tend. Fev·Mar·Abr</div>
+                <div class="kpi-mini-label">Tend. ${TEND_LABEL}</div>
                 <div style="display:flex;align-items:flex-end;gap:4px;margin-top:4px">
                   ${v.ticket_trend.map((t,i)=>{
                     const h = Math.round(20 + (t / Math.max(...v.ticket_trend)) * 24);
@@ -1748,10 +1770,10 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
         <div style="margin-top:16px;padding:14px;background:var(--bg4);border-radius:10px">
           <div class="kpi-mini-label" style="margin-bottom:8px">Projeção de Fechamento</div>
           <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${v.projecao >= meta.global ? 'var(--green)' : 'var(--red)'}">${v.projecao > 0 ? fmtK(v.projecao) : '—'}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px">Abril: ${fmtK(v.fat_abril)} · ${v.pedidos_abril} pedidos</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">${MES_ANT}: ${fmtK(v.fat_abril)} · ${v.pedidos_abril} pedidos</div>
         </div>` : `
         <div style="margin-top:16px;padding:14px;background:var(--bg4);border-radius:10px">
-          <div class="kpi-mini-label" style="margin-bottom:4px">Abril 2026</div>
+          <div class="kpi-mini-label" style="margin-bottom:4px">${MES_ANT} ${ANO_MES_ANT}</div>
           <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${accentColor}">${fmtK(v.fat_abril)}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">${v.pedidos_abril} pedidos</div>
         </div>`}
@@ -1759,7 +1781,7 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
     </div>
     <div class="vend-col">
       <div class="vend-card" style="flex:1">
-        <div class="vend-card-title">Top 5 Clientes · Maio</div>
+        <div class="vend-card-title">Top 5 Clientes · ${MES_ATUAL}</div>
         ${listaClientes}
         ${insightsHTML}
       </div>
@@ -1769,26 +1791,26 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
         <div class="vend-card-title">vs Mês Anterior (mesmos dias)</div>
         ${(() => {
           const dias = D.dias_corridos_passados || 1;
-          const diasMesAnterior = 30; // abril tem 30 dias
-          const abrilProporcional = (v.fat_abril || 0) * dias / diasMesAnterior;
-          const variacao = abrilProporcional > 0 ? ((v.fat_maio - abrilProporcional) / abrilProporcional * 100) : 0;
+          const diasMesAnterior = DIAS_MES_ANT;
+          const mesAntProporcional = (v.fat_abril || 0) * dias / diasMesAnterior;
+          const variacao = mesAntProporcional > 0 ? ((v.fat_maio - mesAntProporcional) / mesAntProporcional * 100) : 0;
           const cor = variacao >= 0 ? 'var(--green)' : 'var(--red)';
           const seta = variacao >= 0 ? '▲' : '▼';
           return `
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div>
-                <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--muted);line-height:1">${fmtK(abrilProporcional)}</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:4px">Abril (dias 1-${dias})</div>
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--muted);line-height:1">${fmtK(mesAntProporcional)}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:4px">${MES_ANT} (dias 1-${dias})</div>
               </div>
               <div style="text-align:center">
                 <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${cor};line-height:1">${seta} ${Math.abs(variacao).toFixed(1).replace('.',',')}%</div>
               </div>
               <div style="text-align:right">
                 <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${accentColor};line-height:1">${fmtK(v.fat_maio)}</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:4px">Maio (dias 1-${dias})</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:4px">${MES_ATUAL} (dias 1-${dias})</div>
               </div>
             </div>
-            <div style="font-size:10px;color:var(--dim);margin-top:8px;text-align:center">Abril total: ${fmtK(v.fat_abril)} · ${v.pedidos_abril} pedidos</div>
+            <div style="font-size:10px;color:var(--dim);margin-top:8px;text-align:center">${MES_ANT} total: ${fmtK(v.fat_abril)} · ${v.pedidos_abril} pedidos</div>
           `;
         })()}
       </div>
@@ -1796,7 +1818,7 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
         ${(() => {
           const ult = v.ultimas_vendas || [];
           if (ult.length === 0) {
-            return '<div class="vend-card-title">Últimas 5 Vendas · Maio</div><div style="color:var(--muted);font-size:12px;padding:8px 0">Sem vendas no mês</div>';
+            return `<div class="vend-card-title">Últimas 5 Vendas · ${MES_ATUAL}</div><div style="color:var(--muted);font-size:12px;padding:8px 0">Sem vendas no mês</div>`;
           }
           const total = ult.reduce((s,c) => s + c.valor, 0);
           const max = Math.max(...ult.map(c => c.valor));
@@ -1816,7 +1838,7 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
           const MESES_ABREV = {'01':'JAN','02':'FEV','03':'MAR','04':'ABR','05':'MAI','06':'JUN','07':'JUL','08':'AGO','09':'SET','10':'OUT','11':'NOV','12':'DEZ'};
           return `
             <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
-              <div class="vend-card-title" style="margin-bottom:0">Últimas 5 Vendas · Maio</div>
+              <div class="vend-card-title" style="margin-bottom:0">Últimas 5 Vendas · ${MES_ATUAL}</div>
               <div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1.5px;text-transform:uppercase">total <span style="color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px">${fmtK(total)}</span></div>
             </div>
             ${ult.map(c => {
@@ -1849,7 +1871,7 @@ function buildVendedorGrid(containerId, vendNome, accentColor) {
         })()}
       </div>
       <div class="vend-card" style="flex:0">
-        <div class="vend-card-title">Marcas em Alta · Maio</div>
+        <div class="vend-card-title">Marcas em Alta · ${MES_ATUAL}</div>
         ${listaProd}
       </div>
     </div>
