@@ -2166,17 +2166,43 @@ function initT9() {
     Object.values(D.vendedores || {}).forEach(v => (v.top_marcas || []).forEach(([m, val]) => { acc[m] = (acc[m] || 0) + val; }));
     return Object.entries(acc).sort((a, b) => b[1] - a[1]).slice(0, 5);
   })();
-  const marcasCard = marcasGrupo.length ? `
+  const marcasCard = marcasGrupo.length ? (() => {
+    // Comparativo vs mes anterior: proporcional aos mesmos dias corridos,
+    // igual ao card "vs Mes Anterior" das telas de vendedor.
+    const mgAnt = D.marcas_grupo_ant;
+    const mesAntStr = (() => {
+      const [y, m] = (D.hoje || '').split('-').map(Number);
+      if (!y) return '';
+      return m === 1 ? (y - 1) + '-12' : y + '-' + String(m - 1).padStart(2, '0');
+    })();
+    const antOk = !!(mgAnt && mgAnt.mes === mesAntStr && (mgAnt.dados || []).length && mgAnt.dias);
+    const antMap = antOk ? Object.fromEntries(mgAnt.dados) : {};
+    const linhas = marcasGrupo.map(([m, val], i) => {
+      let delta = '';
+      if (antOk) {
+        const prev = antMap[m];
+        if (prev) {
+          const prorata = prev * diasPassados / mgAnt.dias;
+          const pct = prorata > 0 ? (val - prorata) / prorata * 100 : 0;
+          const up = pct >= 0;
+          delta = `<span style="font-size:10px;font-weight:800;color:${up ? 'var(--green)' : 'var(--red)'};margin-left:8px">${up ? '▲' : '▼'} ${Math.abs(pct).toFixed(0)}%</span>`;
+        } else {
+          delta = `<span style="font-size:9px;font-weight:800;color:var(--green);margin-left:8px;letter-spacing:1px">NOVA</span>`;
+        }
+      }
+      return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;${i < marcasGrupo.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}">
+            <div style="font-size:13px;color:var(--text);font-weight:600"><span style="color:var(--muted);font-weight:800;font-size:11px;margin-right:8px">${i + 1}</span>${m}${delta}</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:.5px">${fmtK(val)}</div>
+          </div>`;
+    }).join('');
+    return `
     <div class="vd-side-card">
       <div class="vd-side-label">Top 5 Marcas · Grupo</div>
-      <div style="margin-top:8px">
-        ${marcasGrupo.map(([m, val], i) => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;${i < marcasGrupo.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}">
-            <div style="font-size:13px;color:var(--text);font-weight:600"><span style="color:var(--muted);font-weight:800;font-size:11px;margin-right:8px">${i + 1}</span>${m}</div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:.5px">${fmtK(val)}</div>
-          </div>`).join('')}
-      </div>
-    </div>` : '';
+      <div style="margin-top:8px">${linhas}</div>
+      ${antOk ? `<div style="font-size:9px;color:var(--dim);margin-top:6px">% vs ${MES_ANT} · mesmos ${diasPassados} dias (proporcional)</div>` : ''}
+    </div>`;
+  })() : '';
 
   // CASO ESPECIAL: meta ja batida — celebra
   if (total >= meta && meta > 0) {
