@@ -315,8 +315,13 @@ def inferir_marca(prod_nome):
     from gerar_relatorio import marca as marca_lista
     nome = (prod_nome or '').strip()
     sufixo = nome.split(' - ')[-1].strip() if ' - ' in nome else ''
-    if sufixo and marca_lista(sufixo) != 'Outras':
-        return sufixo
+    if sufixo:
+        m_suf = marca_lista(sufixo)
+        # So mantem o sufixo cru se ele COMECA pela marca (preserva "SHARK
+        # BARBER"); sufixo com lixo antes ("140ML -MACHO-LÂNDIA") cai na
+        # regra 2 e consolida no bucket da marca.
+        if m_suf != 'Outras' and sufixo.upper().startswith(m_suf.upper()):
+            return sufixo
     m = marca_lista(nome)
     if m != 'Outras':
         return m.upper()
@@ -971,7 +976,7 @@ def patch_extras(p, agg, mes_ant_val, mes_ant_nome):
     # casar com o check de cache feito no main() (refetch 1x por mes).
     mga = agg.get('marcas_grupo_ant')
     if mga:
-        mga_js = ('{mes:"' + mga['mes'] + '", dias:' + str(mga['dias'])
+        mga_js = ('{v:2, mes:"' + mga['mes'] + '", dias:' + str(mga['dias'])
                   + ', dados:' + js_array_of_pairs(mga['dados']) + '}')
         if re.search(r'marcas_grupo_ant:\s*\{[^}]*\}', p.html):
             p.replace(
@@ -1136,7 +1141,9 @@ def main():
             html_atual = target.read_text()
         except Exception:
             html_atual = ''
-        if f'marcas_grupo_ant: {{mes:"{mes_ant_str}"' in html_atual:
+        # v:2 = formato com TODAS as marcas + inferir_marca consolidando
+        # sufixo com lixo; mudar a versao invalida caches antigos.
+        if f'marcas_grupo_ant: {{v:2, mes:"{mes_ant_str}"' in html_atual:
             agg['marcas_grupo_ant'] = None  # cache valido — patch mantem o que esta la
             print(f'  Marcas do mes anterior ({mes_ant_str}): cache valido, sem refetch')
         else:
@@ -1150,8 +1157,10 @@ def main():
                 agg['marcas_grupo_ant'] = {
                     'mes': mes_ant_str,
                     'dias': calendar.monthrange(ano_ant, mes_ant)[1],
+                    # todas as marcas — truncar esconderia marca pequena no mes
+                    # fechado e o card marcaria "NOVA" errado
                     'dados': sorted([[k, round(v, 2)] for k, v in marcas_ant.items()],
-                                    key=lambda x: -x[1])[:12],
+                                    key=lambda x: -x[1]),
                 }
                 print(f'  Marcas de {mes_ant_str}: {len(marcas_ant)} marca(s) computada(s)')
             except Exception as e:
