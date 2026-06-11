@@ -303,6 +303,26 @@ def compute_base_ativa_meses(vendas_resumo, current_items, ano_atual, mes_atual,
     return out
 
 
+def inferir_marca(prod_nome):
+    """Marca exibida no dashboard. Prioridade:
+    1. sufixo apos " - " quando ele PROPRIO e marca conhecida — padrao dos
+       cosmeticos ("POMADA TEIA - FOX", "PO VOLUMADOR - SHARK BARBER");
+    2. marca conhecida em qualquer lugar do nome — acessorios usam " - "
+       pro TAMANHO ("Komakai R10 - 5.0"), o sufixo seria lixo ("5.0");
+    3. sufixo cru (marca nova que ainda nao esta na lista);
+    4. OUTROS.
+    """
+    from gerar_relatorio import marca as marca_lista
+    nome = (prod_nome or '').strip()
+    sufixo = nome.split(' - ')[-1].strip() if ' - ' in nome else ''
+    if sufixo and marca_lista(sufixo) != 'Outras':
+        return sufixo
+    m = marca_lista(nome)
+    if m != 'Outras':
+        return m.upper()
+    return sufixo or 'OUTROS'
+
+
 def aggregate(items):
     """Agrega items em estrutura pronta pro patch do index.html."""
     if not items:
@@ -347,10 +367,7 @@ def aggregate(items):
         pv['clientes'].add(it['cliente']); pv['itens'] += int(it['qtd'])
         pv['top_clientes'][it['cliente']] += it['valor']
         pv['top_produtos'][it['produto']] += it['valor']
-        # Marca = último segmento após " - " no nome do produto
-        prod_nome = it['produto'] or ''
-        marca = prod_nome.split(' - ')[-1].strip() if ' - ' in prod_nome else 'OUTROS'
-        pv['top_marcas'][marca] += it['valor']
+        pv['top_marcas'][inferir_marca(it['produto'])] += it['valor']
         pv['por_dia'][d] += it['valor']
         # Acumula vendas individuais por sale_id
         sale_id = it['sale']
@@ -389,7 +406,9 @@ def aggregate(items):
             top_prod = max(top_sale['top_produto'].items(), key=lambda kv: kv[1])[0] if top_sale['top_produto'] else ''
             parts = top_prod.split(' - ')
             prod_nome = parts[0].strip() if parts else top_prod
-            prod_marca = parts[-1].strip() if len(parts) > 1 else ''
+            prod_marca = inferir_marca(top_prod) if top_prod else ''
+            if prod_marca == 'OUTROS':
+                prod_marca = ''
             venda_destaque = {
                 'data': top_sale['data'].strftime('%d/%m'),
                 'cliente': top_sale['cliente'],
