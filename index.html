@@ -2158,6 +2158,25 @@ function initT9() {
   const proj = D.projecao || 0;
   const vaiBater = proj >= meta;
 
+  // Top 5 marcas do grupo — vem do script (D.marcas_grupo); fallback soma os
+  // top_marcas por vendedor (aproximado, pois cada lista e truncada em 5).
+  const marcasGrupo = (D.marcas_grupo && D.marcas_grupo.length) ? D.marcas_grupo : (() => {
+    const acc = {};
+    Object.values(D.vendedores || {}).forEach(v => (v.top_marcas || []).forEach(([m, val]) => { acc[m] = (acc[m] || 0) + val; }));
+    return Object.entries(acc).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  })();
+  const marcasCard = marcasGrupo.length ? `
+    <div class="vd-side-card">
+      <div class="vd-side-label">Top 5 Marcas · Grupo</div>
+      <div style="margin-top:8px">
+        ${marcasGrupo.map(([m, val], i) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;${i < marcasGrupo.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}">
+            <div style="font-size:13px;color:var(--text);font-weight:600"><span style="color:var(--muted);font-weight:800;font-size:11px;margin-right:8px">${i + 1}</span>${m}</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:.5px">${fmtK(val)}</div>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
   // CASO ESPECIAL: meta ja batida — celebra
   if (total >= meta && meta > 0) {
     main.innerHTML = `
@@ -2175,6 +2194,7 @@ function initT9() {
         <div class="vd-side-main" style="color:#4ade80;margin-top:8px">Parabéns!</div>
         <div class="vd-side-sub">${diasRestantes} dia(s) restantes</div>
       </div>
+      ${marcasCard}
     `;
     return;
   }
@@ -2263,6 +2283,7 @@ function initT9() {
           : `<span style="color:var(--red);font-weight:700">▼ ${fmtK(meta - proj)} abaixo</span> da meta`}
       </div>
     </div>
+    ${marcasCard}
   `;
 }
 
