@@ -966,6 +966,28 @@ def patch_extras(p, agg, mes_ant_val, mes_ant_nome):
         )
         p.changes.append(('marcas_grupo (inserido)', '', mg_js[:60]))
 
+    # marcas_grupo_ant — cache mensal do mes anterior. None = cache do
+    # index.html segue valido, nao mexe. O formato {mes:"YYYY-MM"...} precisa
+    # casar com o check de cache feito no main() (refetch 1x por mes).
+    mga = agg.get('marcas_grupo_ant')
+    if mga:
+        mga_js = ('{mes:"' + mga['mes'] + '", dias:' + str(mga['dias'])
+                  + ', dados:' + js_array_of_pairs(mga['dados']) + '}')
+        if re.search(r'marcas_grupo_ant:\s*\{[^}]*\}', p.html):
+            p.replace(
+                r'marcas_grupo_ant:\s*\{[^}]*\}',
+                f'marcas_grupo_ant: {mga_js}',
+                'marcas_grupo_ant'
+            )
+        else:
+            p.html = re.sub(
+                r'(marcas_grupo:\s*\[[^\n]*\],)',
+                lambda m: m.group(1) + f'\n  marcas_grupo_ant: {mga_js},',
+                p.html,
+                count=1
+            )
+            p.changes.append(('marcas_grupo_ant (inserido)', '', mga_js[:60]))
+
 
 def roll_historico_se_virou_mes(p, agg):
     """Quando o mes muda (ex: maio -> junho), o ponto com 'projecao:true' anterior
@@ -1101,6 +1123,40 @@ def main():
             print(f'  AVISO: falha computando silencio/base_ativa: {e}')
             agg['silencio_by_vendor'] = {}
             agg['base_ativa_by_vendor'] = {}
+
+        # Marcas do mes anterior (comparativo na tela Marcha pra Meta).
+        # Mes fechado nao muda — so busca os itens do mes anterior quando o
+        # cache no index.html nao bate com o mes esperado (1x por mes, na virada).
+        if mes == 1:
+            ano_ant, mes_ant = ano - 1, 12
+        else:
+            ano_ant, mes_ant = ano, mes - 1
+        mes_ant_str = f'{ano_ant:04d}-{mes_ant:02d}'
+        try:
+            html_atual = target.read_text()
+        except Exception:
+            html_atual = ''
+        if f'marcas_grupo_ant: {{mes:"{mes_ant_str}"' in html_atual:
+            agg['marcas_grupo_ant'] = None  # cache valido — patch mantem o que esta la
+            print(f'  Marcas do mes anterior ({mes_ant_str}): cache valido, sem refetch')
+        else:
+            try:
+                print(f'  Buscando itens de {mes_ant_str} pro comparativo de marcas (1x por mes)...')
+                items_ant = fetch_items_from_ca(ano_ant, mes_ant, client=client)
+                marcas_ant = defaultdict(float)
+                for it in items_ant:
+                    if VENDOR_FULL_NAMES.get(it['vendor']):
+                        marcas_ant[inferir_marca(it['produto'])] += it['valor']
+                agg['marcas_grupo_ant'] = {
+                    'mes': mes_ant_str,
+                    'dias': calendar.monthrange(ano_ant, mes_ant)[1],
+                    'dados': sorted([[k, round(v, 2)] for k, v in marcas_ant.items()],
+                                    key=lambda x: -x[1])[:12],
+                }
+                print(f'  Marcas de {mes_ant_str}: {len(marcas_ant)} marca(s) computada(s)')
+            except Exception as e:
+                print(f'  AVISO: falha buscando marcas do mes anterior: {e}')
+                agg['marcas_grupo_ant'] = None
     else:
         if not args.pivot or not args.transacional:
             print('ERRO: precisa de --pivot + --transacional OU --ca-fetch', file=sys.stderr)
