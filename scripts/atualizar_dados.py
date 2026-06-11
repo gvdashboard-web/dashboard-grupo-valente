@@ -341,6 +341,7 @@ def aggregate(items):
     total = 0.0
     pedidos = set(); clientes = set(); itens = 0
     por_dia = defaultdict(float)
+    marcas_grupo = defaultdict(float)  # ranking de marcas do GRUPO (todos os vendedores)
     por_v = defaultdict(lambda: {
         'total':0.0,'abc':0.0,'pedidos':set(),'clientes':set(),'itens':0,
         'top_clientes':defaultdict(float),'top_produtos':defaultdict(float),
@@ -367,7 +368,9 @@ def aggregate(items):
         pv['clientes'].add(it['cliente']); pv['itens'] += int(it['qtd'])
         pv['top_clientes'][it['cliente']] += it['valor']
         pv['top_produtos'][it['produto']] += it['valor']
-        pv['top_marcas'][inferir_marca(it['produto'])] += it['valor']
+        marca_dash = inferir_marca(it['produto'])
+        pv['top_marcas'][marca_dash] += it['valor']
+        marcas_grupo[marca_dash] += it['valor']
         pv['por_dia'][d] += it['valor']
         # Acumula vendas individuais por sale_id
         sale_id = it['sale']
@@ -440,6 +443,8 @@ def aggregate(items):
         'itens': itens,
         'dias_com_venda': len([d for d,v in por_dia.items() if v > 0]),
         'vendas_por_dia': {d: round(v,2) for d,v in sorted(por_dia.items())},
+        'marcas_grupo': sorted([[k, round(v,2)] for k,v in marcas_grupo.items()],
+                               key=lambda x: -x[1])[:5],
         'vendedores': {},
     }
 
@@ -943,6 +948,23 @@ def patch_extras(p, agg, mes_ant_val, mes_ant_nome):
             count=1
         )
         p.changes.append(('venda_destaque (inserido)', '', vd_js[:60] + '...'))
+
+    # marcas_grupo (top 5 marcas do GRUPO — tela Marcha pra Meta)
+    mg_js = js_array_of_pairs(agg.get('marcas_grupo') or [])
+    if re.search(r'marcas_grupo:\s*\[[^\n]*\]', p.html):
+        p.replace(
+            r'marcas_grupo:\s*\[[^\n]*\]',
+            f'marcas_grupo: {mg_js}',
+            'marcas_grupo'
+        )
+    else:
+        p.html = re.sub(
+            r'(venda_destaque:\s*(?:\{[^}]*\}|null),)',
+            lambda m: m.group(1) + f'\n  marcas_grupo: {mg_js},',
+            p.html,
+            count=1
+        )
+        p.changes.append(('marcas_grupo (inserido)', '', mg_js[:60]))
 
 
 def roll_historico_se_virou_mes(p, agg):
