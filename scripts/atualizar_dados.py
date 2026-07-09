@@ -81,6 +81,8 @@ def fetch_items_from_ca(ano, mes, client=None):
     ultimo  = f'{ano:04d}-{mes:02d}-{cal_mod.monthrange(ano, mes)[1]:02d}'
 
     items = []
+    soma_bruta = 0.0   # soma item a item (preco_unit * qtd) — pode ter desconto embutido
+    soma_liq = 0.0     # soma do total liquido de cada venda — o que o CA mostra
     for nome, vid in nome_to_id.items():
         vendor_key = SELLER_NAMES_LOCAL[nome]
         pagina = 1
@@ -104,6 +106,9 @@ def fetch_items_from_ca(ano, mes, client=None):
                 except (ValueError, KeyError):
                     continue
                 cliente_nome = venda.get('cliente', {}).get('nome', '?')
+                # Total LIQUIDO da venda (ja com desconto/frete) — base do faturamento
+                venda_total_liq = venda.get('total', 0) or 0
+                soma_liq += venda_total_liq
 
                 # Busca itens da venda
                 try:
@@ -117,6 +122,7 @@ def fetch_items_from_ca(ano, mes, client=None):
                     qtd = it.get('quantidade', 0) or 0
                     valor_unit = it.get('valor', 0) or 0
                     valor_total = valor_unit * qtd
+                    soma_bruta += valor_total
                     produto = it.get('nome', '')
                     items.append({
                         'sale': str(sale_numero),
@@ -124,7 +130,8 @@ def fetch_items_from_ca(ano, mes, client=None):
                         'cliente': cliente_nome,
                         'produto': produto,
                         'qtd': qtd,
-                        'valor': valor_total,
+                        'valor': valor_total,          # bruto da linha (rankings de produto/marca)
+                        'venda_total': venda_total_liq, # liquido da venda (faturamento) — igual p/ todos os itens da venda
                         'vendor': vendor_key,
                         'categoria': categorizar(produto),
                         'marca': marca(produto),
@@ -137,7 +144,14 @@ def fetch_items_from_ca(ano, mes, client=None):
             pagina += 1
         print(f'    {nome}: {vendas_count} venda(s)')
 
-    print(f'  Total: {len(items)} itens de {len(set(i["sale"] for i in items))} vendas')
+    n_vendas = len(set(i["sale"] for i in items))
+    print(f'  Total: {len(items)} itens de {n_vendas} vendas')
+    desc = soma_bruta - soma_liq
+    pct = (desc / soma_liq * 100) if soma_liq else 0
+    print(f'  RECONCILIACAO: bruto(itens)=R$ {soma_bruta:,.2f} | '
+          f'liquido(venda.total)=R$ {soma_liq:,.2f} | '
+          f'desconto=R$ {desc:,.2f} ({pct:+.1f}%)')
+    print(f'  >> O dashboard usa o LIQUIDO (bate com "Aprovados" do Conta Azul).')
     return items
 
 
@@ -261,6 +275,59 @@ def compute_silencio(vendas_resumo, vendas_mes_atual,
     return dict(out)
 
 
+def compute_evol_diaria(vendas_resumo, current_items, ano_atual, mes_atual, n_meses=4):
+    """Vendas diarias (LIQUIDO) por mes, ultimos n_meses incluindo o atual.
+    Base pra tela de evolucao acumulada (sobreposicao dos meses).
+
+    - Meses fechados: vem de vendas_resumo (venda.total, sem itens — leve).
+    - Mes atual: dos current_items (venda_total por venda, uma vez por sale).
+
+    Retorna [{mes:"YYYY-MM", dias:[[dia, valor], ...]}] do mais antigo pro atual.
+    Os valores sao DIARIOS (nao acumulados) — o JS acumula na hora de plotar.
+    """
+    # Lista de (ano, mes): atual + (n_meses-1) anteriores
+    meses = []
+    a, m = ano_atual, mes_atual
+    for _ in range(n_meses):
+        meses.append((a, m))
+        if m == 1:
+            a, m = a - 1, 12
+        else:
+            m -= 1
+    meses = list(reversed(meses))  # mais antigo -> atual
+    atual_ym = (ano_atual, mes_atual)
+
+    buckets = {ym: defaultdict(float) for ym in meses}
+
+    # Meses fechados: vendas_resumo (ja e liquido — venda.total)
+    for r in vendas_resumo:
+        ym = (r['data'].year, r['data'].month)
+        if ym in buckets and ym != atual_ym:
+            buckets[ym][r['data'].day] += r['valor']
+
+    # Mes atual: soma venda_total (liquido) UMA vez por sale
+    seen = set()
+    for it in current_items:
+        if not VENDOR_FULL_NAMES.get(it['vendor']):
+            continue
+        sid = it['sale']
+        if sid in seen:
+            continue
+        seen.add(sid)
+        d = it['data']
+        if (d.year, d.month) == atual_ym:
+            buckets[atual_ym][d.day] += (it.get('venda_total') or 0)
+
+    out = []
+    for ym in meses:
+        dias = sorted(buckets[ym].items())
+        out.append({
+            'mes': f'{ym[0]:04d}-{ym[1]:02d}',
+            'dias': [[dia, round(v, 2)] for dia, v in dias],
+        })
+    return out
+
+
 def compute_base_ativa_meses(vendas_resumo, current_items, ano_atual, mes_atual, meses=3):
     """Conta clientes unicos por vendedor em cada um dos N meses TOTAIS.
     `meses` inclui o mes atual (parcial). Ex: meses=3 -> [anterior-1, anterior, atual].
@@ -360,37 +427,58 @@ def aggregate(items):
         'top_produto': defaultdict(float),
     })
 
+    # PASSO 1 — vendas unicas com TOTAL LIQUIDO (o que o CA mostra em "Aprovados").
+    # Desconto/frete sao no nivel da venda, entao somar itens daria o BRUTO.
+    # Fallback pro bruto se a venda nao trouxe total (robustez).
+    vendas_uniq = {}  # sale_id -> {liq, bruto, data, cliente, vendor}
     for it in items:
         v = VENDOR_FULL_NAMES.get(it['vendor'])
         if not v:
             continue
-        total += it['valor']
-        pedidos.add(it['sale']); clientes.add(it['cliente']); itens += int(it['qtd'])
-        d = it['data'].strftime('%d/%m')
-        por_dia[d] += it['valor']
+        sid = it['sale']
+        if sid not in vendas_uniq:
+            vendas_uniq[sid] = {
+                'liq': it.get('venda_total'), 'bruto': 0.0,
+                'data': it['data'], 'cliente': it['cliente'], 'vendor': v,
+            }
+        vendas_uniq[sid]['bruto'] += it['valor']
+    for vd in vendas_uniq.values():
+        liq = vd['liq']
+        vd['valor'] = liq if (liq and liq > 0) else vd['bruto']
+
+    # PASSO 2 — faturamento (total, por vendedor, por dia, clientes, vendas) = LIQUIDO.
+    for sid, vd in vendas_uniq.items():
+        v = vd['vendor']
+        total += vd['valor']
+        pedidos.add(sid); clientes.add(vd['cliente'])
+        d = vd['data'].strftime('%d/%m')
+        por_dia[d] += vd['valor']
         pv = por_v[v]
-        pv['total'] += it['valor']; pv['pedidos'].add(it['sale'])
-        pv['clientes'].add(it['cliente']); pv['itens'] += int(it['qtd'])
-        pv['top_clientes'][it['cliente']] += it['valor']
+        pv['total'] += vd['valor']; pv['pedidos'].add(sid)
+        pv['clientes'].add(vd['cliente'])
+        pv['top_clientes'][vd['cliente']] += vd['valor']
+        pv['por_dia'][d] += vd['valor']
+        pv['vendas_acumuladas'][sid] = {
+            'data': vd['data'], 'cliente': vd['cliente'], 'valor': vd['valor']
+        }
+        sa = sales_agg[sid]
+        sa['data'] = vd['data']; sa['cliente'] = vd['cliente']
+        sa['vendor'] = v; sa['valor'] = vd['valor']
+
+    # PASSO 3 — rankings de produto/marca/categoria = BRUTO por item
+    # (desconto nao e rateavel por produto de forma confiavel).
+    for it in items:
+        v = VENDOR_FULL_NAMES.get(it['vendor'])
+        if not v:
+            continue
+        itens += int(it['qtd'])
+        pv = por_v[v]
+        pv['itens'] += int(it['qtd'])
         pv['top_produtos'][it['produto']] += it['valor']
         marca_dash = inferir_marca(it['produto'])
         pv['top_marcas'][marca_dash] += it['valor']
         marcas_grupo[marca_dash] += it['valor']
-        pv['por_dia'][d] += it['valor']
-        # Acumula vendas individuais por sale_id
-        sale_id = it['sale']
-        if sale_id not in pv['vendas_acumuladas']:
-            pv['vendas_acumuladas'][sale_id] = {
-                'data': it['data'], 'cliente': it['cliente'], 'valor': 0
-            }
-        pv['vendas_acumuladas'][sale_id]['valor'] += it['valor']
-        # Acumula tambem no sales_agg geral (pra venda_destaque)
-        sa = sales_agg[sale_id]
-        sa['data'] = it['data']
-        sa['cliente'] = it['cliente']
-        sa['vendor'] = v
-        sa['valor'] += it['valor']
-        sa['top_produto'][it['produto']] += it['valor']
+        sales_agg[it['sale']]['top_produto'][it['produto']] += it['valor']
         if it['categoria'] in ABC_CATS:
             pv['abc'] += it['valor']
 
@@ -993,6 +1081,27 @@ def patch_extras(p, agg, mes_ant_val, mes_ant_nome):
             )
             p.changes.append(('marcas_grupo_ant (inserido)', '', mga_js[:60]))
 
+    # evol_diaria — vendas diarias (liquido) dos ultimos meses pra tela de
+    # evolucao acumulada. Recomputado a cada run (sem cache); so patcha se veio
+    # do modo --ca-fetch (CSV nao tem). Serializado numa unica linha.
+    evol = agg.get('evol_diaria')
+    if evol is not None:
+        def _dias_js(dias):
+            return '[' + ','.join(f'[{d},{v:g}]' for d, v in dias) + ']'
+        evol_js = '[' + ','.join(
+            '{mes:"' + e['mes'] + '", dias:' + _dias_js(e['dias']) + '}' for e in evol
+        ) + ']'
+        if re.search(r'evol_diaria:\s*\[.*\]', p.html):
+            p.replace(r'evol_diaria:\s*\[.*\]', f'evol_diaria: {evol_js}', 'evol_diaria')
+        else:
+            p.html = re.sub(
+                r'(marcas_grupo:\s*\[[^\n]*\],)',
+                lambda m: m.group(1) + f'\n  evol_diaria: {evol_js},',
+                p.html,
+                count=1
+            )
+            p.changes.append(('evol_diaria (inserido)', '', f'{len(evol)} meses'))
+
 
 def roll_historico_se_virou_mes(p, agg):
     """Quando o mes muda (ex: maio -> junho), o ponto com 'projecao:true' anterior
@@ -1122,12 +1231,17 @@ def main():
             agg['base_ativa_by_vendor'] = compute_base_ativa_meses(
                 vendas_resumo, items, ano, mes, meses=3
             )
+            # Evolucao diaria acumulada (tela de sobreposicao) — reaproveita
+            # o vendas_resumo, sem fetch novo.
+            agg['evol_diaria'] = compute_evol_diaria(vendas_resumo, items, ano, mes, n_meses=4)
             print(f'  Silencio computado por vendedor: {[(v, len(s)) for v,s in agg["silencio_by_vendor"].items()]}')
             print(f'  Base ativa computada por vendedor: {[(v, [(b["mes"],b["n"]) for b in bs]) for v,bs in agg["base_ativa_by_vendor"].items()]}')
+            print(f'  Evolucao diaria: {[(e["mes"], len(e["dias"])) for e in agg["evol_diaria"]]}')
         except Exception as e:
-            print(f'  AVISO: falha computando silencio/base_ativa: {e}')
+            print(f'  AVISO: falha computando silencio/base_ativa/evol: {e}')
             agg['silencio_by_vendor'] = {}
             agg['base_ativa_by_vendor'] = {}
+            agg['evol_diaria'] = []
 
         # Marcas do mes anterior (comparativo na tela Marcha pra Meta).
         # Mes fechado nao muda — so busca os itens do mes anterior quando o
