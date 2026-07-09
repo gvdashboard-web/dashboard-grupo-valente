@@ -1283,8 +1283,8 @@
 
 
 const D = {
-  atualizado_em: "09/07 13:15",
-  atualizado_em_iso: "2026-07-09T13:15:47-04:00",
+  atualizado_em: "09/07 13:25",
+  atualizado_em_iso: "2026-07-09T13:25:00-04:00",
   hoje: "2026-07-10",
   dias_corridos_passados: 9,
   dias_corridos_total: 31,
@@ -1299,7 +1299,7 @@ const D = {
   projecao: 125161.47,
   venda_destaque: { data: "09/07", cliente: "Julian Vinicius Rodrigues e Silva", valor: 50, vendedor: "Róger Silva", produto_top: "NAVALHA MARROM", produto_top_marca: "UMI" },
   marcas_grupo: [["FOX",9635.2],["BABOON",5491],["MACHO-LÂNDIA",5139],["WAHL",4514],["SHARK BARBER",3521]],
-  evol_diaria: [],
+  evol_diaria: [{mes:"2026-04", dias:[[1,7711],[2,1667],[4,732],[6,7050],[7,5832.9],[8,2909],[9,3761],[10,2484],[11,210],[13,2731],[14,892],[15,3072],[16,1410],[17,3703],[18,3565],[19,300],[20,4381],[21,1042],[22,14711.3],[23,2819],[24,862],[26,505],[27,2915],[28,2397],[29,191],[30,3610]]},{mes:"2026-05", dias:[[2,6594],[4,1080],[5,3024],[6,2404],[7,4600],[8,6094.99],[9,366],[11,4018],[12,1040],[13,7243.91],[14,4233],[15,988],[16,697],[17,1220],[18,3023],[19,2426],[20,1781],[21,1821],[22,2231],[24,2849],[25,10080],[26,1994],[27,619],[28,3130],[29,709],[30,25]]},{mes:"2026-06", dias:[[1,4284],[2,3972],[3,2794],[5,14088.6],[6,1206],[8,5885],[9,10941],[10,13139],[11,7084],[12,1085],[13,2378],[14,1713],[15,2942],[16,330.34],[17,2269.6],[18,2795],[19,666],[20,380],[22,3174],[23,2172],[24,1101],[25,2683],[26,1038],[27,460],[28,50],[29,4009.02],[30,10130]]},{mes:"2026-07", dias:[[1,1733],[2,10169],[3,6912],[4,493],[5,288],[6,2591],[7,4995],[8,9071.2],[9,85]]}],
   marcas_grupo_ant: {v:2, mes:"2026-06", dias:30, dados:[["MACHO-LÂNDIA",22671],["KOMAKAI",19211],["BABOON",13897],["FOX",11452.3],["WAHL",10421],["SHARK BARBER",5933],["UMI",3660],["DON ALCIDES",3463.34],["HIGIMAXX",2700],["DOMPEL",2363],["BIG BARBER",1800],["EMBAIXADOR",1508],["CRICKET",850],["SUPERBARBA",675],["ANDIS",459],["GALLETZ",399],["SHARK",384],["CABELL",380],["OUTROS",290],["BTH",185],["KANNEP",112],["TALGE",88],["GRUPO VALENTE",14.7]]},
   dias_com_venda: 9,
   vendas_por_dia: { "01/07": 1733, "02/07": 10169, "03/07": 6912, "04/07": 493, "05/07": 288, "06/07": 2591, "07/07": 4995, "08/07": 9071.2, "09/07": 85 },
@@ -1400,10 +1400,34 @@ const D = {
     ]
   },
   insights: {
-    "Erivan Lima": { silencio: [], base_ativa_meses: [] },
-    "Róger Silva": { silencio: [], base_ativa_meses: [] },
-    "Lucas de Mello Valente": { silencio: [], base_ativa_meses: [] },
-    "Jalena": { silencio: [], base_ativa_meses: [] }
+    "Erivan Lima": { silencio: [
+        {nome:"Idenilson Júnior Costa da Silva", dias:46, valor_ult:2849, data_ult:"24/05"},
+        {nome:"V/ Jhonatas Alves Belchior Mathias", dias:112, valor_ult:1704, data_ult:"19/03"},
+        {nome:"Thiago Andrade Mavignier", dias:73, valor_ult:1660, data_ult:"27/04"},
+        {nome:"TOP GYM MODA FITNEES", dias:115, valor_ult:1327, data_ult:"16/03"},
+        {nome:"STUDIO TOP FASHION", dias:107, valor_ult:966, data_ult:"24/03"}
+      ], base_ativa_meses: [{mes:"2026-05", n:50, parcial:false},{mes:"2026-06", n:41, parcial:false},{mes:"2026-07", n:16, parcial:true}] },
+    "Róger Silva": { silencio: [
+        {nome:"Anderson Lopes Barros", dias:99, valor_ult:3500, data_ult:"01/04"},
+        {nome:"Marlei Rian Farias de Brito", dias:56, valor_ult:2454, data_ult:"14/05"},
+        {nome:"Mary Stephany da Silva ", dias:57, valor_ult:1199, data_ult:"13/05"},
+        {nome:"(V) Geysivan Ferreira de Assunção (V)", dias:53, valor_ult:970, data_ult:"17/05"},
+        {nome:"BALBINO BARBERSHOP", dias:52, valor_ult:744, data_ult:"18/05"}
+      ], base_ativa_meses: [{mes:"2026-05", n:31, parcial:false},{mes:"2026-06", n:30, parcial:false},{mes:"2026-07", n:7, parcial:true}] },
+    "Lucas de Mello Valente": { silencio: [
+        {nome:"Marlei Rian Farias de Brito", dias:80, valor_ult:3618, data_ult:"20/04"},
+        {nome:"Leonis Alcantarino Deodato", dias:93, valor_ult:3207.9, data_ult:"07/04"},
+        {nome:"Gustavo Henrique Costa Silva", dias:45, valor_ult:1694.04, data_ult:"25/05"},
+        {nome:"Rivarol Ramos da Silva (ESTÉTICA)", dias:59, valor_ult:1515, data_ult:"11/05"},
+        {nome:"João Marcos Souza da Silva", dias:62, valor_ult:780, data_ult:"08/05"}
+      ], base_ativa_meses: [{mes:"2026-05", n:17, parcial:false},{mes:"2026-06", n:19, parcial:false},{mes:"2026-07", n:9, parcial:true}] },
+    "Jalena": { silencio: [
+        {nome:"Barbearia Dom Capone (DB Ponta Negra)", dias:62, valor_ult:725, data_ult:"08/05"},
+        {nome:"Barbearia Dom Capone (Carrefour Flores)", dias:62, valor_ult:635, data_ult:"08/05"},
+        {nome:"Lougsas Silva Santos", dias:57, valor_ult:600, data_ult:"13/05"},
+        {nome:"Barbearia Dom Capone (Shopping Sumaúma)", dias:62, valor_ult:440, data_ult:"08/05"},
+        {nome:"Barbearia Dom Capone (DB Nova Cidade)", dias:62, valor_ult:421, data_ult:"08/05"}
+      ], base_ativa_meses: [{mes:"2026-05", n:15, parcial:false},{mes:"2026-06", n:16, parcial:false},{mes:"2026-07", n:9, parcial:true}] }
   }
 };
 
