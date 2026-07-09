@@ -1254,6 +1254,26 @@
   </div>
 </div>
 
+<!-- TELA 10: EVOLUÇÃO DIÁRIA ACUMULADA (sobreposição dos meses) -->
+<div class="screen" id="t10">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">GRUPO VALENTE</div>
+      <div class="screen-label">Evolução Diária · Acumulado</div>
+    </div>
+    <div class="header-right">
+      <div class="date-display"></div>
+      <div class="dots"></div>
+    </div>
+  </div>
+  <div class="hist-grid" style="grid-template-columns:1fr;">
+    <div class="hist-card">
+      <div class="hist-card-title">Faturamento acumulado dia a dia — sobreposição dos últimos meses</div>
+      <div class="chart-wrap"><canvas id="chart-evol-diaria"></canvas></div>
+    </div>
+  </div>
+</div>
+
 <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:0%"></div></div>
 <div id="pause-indicator" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(245,166,35,0.95);color:#0d1220;padding:10px 20px;border-radius:99px;font-weight:800;font-size:13px;letter-spacing:2px;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,0.4)">
   <span style="font-size:16px">⏸</span> PAUSADO <span style="opacity:0.6;font-weight:600;letter-spacing:1px;margin-left:8px">espaço pra continuar</span>
@@ -2088,6 +2108,74 @@ function initT7() {
   });
 }
 
+// TELA 10: evolução diária acumulada — sobreposição dos últimos meses
+function initT10() {
+  if (typeof Chart === 'undefined') { console.warn('Chart.js nao carregou — pulando initT10'); return; }
+  const meses = D.evol_diaria || [];
+  if (!meses.length) { console.warn('evol_diaria vazio — pulando initT10'); return; }
+
+  const DAYS = 31;
+  const labels = Array.from({length:DAYS}, (_,i)=>i+1);
+  // cores dos meses fechados (mais antigo -> mais recente); mês atual = gold
+  const coresFechados = ['#3b82f6','#a855f7','#22d3ee','#64748b'];
+
+  const datasets = meses.map((e, idx) => {
+    const [yy, mm] = e.mes.split('-').map(Number);
+    const isAtual = idx === meses.length - 1;
+    const diasNoMes = new Date(yy, mm, 0).getDate();          // último dia real do mês
+    const porDia = {}; e.dias.forEach(([d,v]) => { porDia[d] = v; });
+    const maxDiaComDados = e.dias.length ? Math.max(...e.dias.map(x=>x[0])) : 0;
+    // mês atual: linha só até o último dia com venda (parcial); fechados: mês inteiro
+    const limite = isAtual ? maxDiaComDados : diasNoMes;
+
+    let acc = 0; const data = [];
+    for (let d=1; d<=DAYS; d++) {
+      if (d > limite) { data.push(null); continue; }
+      acc += (porDia[d] || 0);
+      data.push(Math.round(acc*100)/100);
+    }
+    const cor = isAtual ? '#f5a623' : coresFechados[idx % coresFechados.length];
+    return {
+      label: mesLabel(e.mes) + (isAtual ? ' (atual)' : ''),
+      data,
+      borderColor: cor,
+      backgroundColor: isAtual ? 'rgba(245,166,35,0.10)' : 'transparent',
+      borderWidth: isAtual ? 4.5 : 2.5,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      fill: isAtual,
+      order: isAtual ? 0 : (meses.length - idx),
+    };
+  });
+
+  new Chart(document.getElementById('chart-evol-diaria'), {
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      ...chartDefaults,
+      spanGaps:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        ...chartDefaults.plugins,
+        legend:{ display:true, labels:{ color:'#8892a4', font:{size:16,family:'Inter'}, boxWidth:16, padding:24, usePointStyle:true } },
+        tooltip:{
+          ...chartDefaults.plugins.tooltip, mode:'index', intersect:false,
+          callbacks:{
+            title: items => 'Dia ' + items[0].label,
+            label: ctx => ctx.raw==null ? null : ' ' + ctx.dataset.label + ': ' + fmtK(ctx.raw)
+          }
+        }
+      },
+      scales:{
+        ...chartDefaults.scales,
+        x:{ ...chartDefaults.scales.x, title:{ display:true, text:'Dia do mês', color:'#6b7fa0', font:{size:13,family:'Inter'} } },
+        y:{ ...chartDefaults.scales.y }
+      }
+    }
+  });
+}
+
 // DOTS
 function buildDots() {
   const total = SCREENS.length;
@@ -2350,7 +2438,7 @@ function renderBadges(vendNome, containerId) {
 }
 
 // ROTAÇÃO
-const SCREENS = ['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9'];
+const SCREENS = ['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10'];
 // Durações por slide proporcionais à densidade
 const DURATIONS = {
   t0: 8000,   // Hero (abertura)
@@ -2551,7 +2639,8 @@ renderBadges('Lucas de Mello Valente', 't5-badges');
 renderBadges('Jalena', 't6-badges');
 initT9();
 setTimeout(() => { try { initT6(); } catch(e){ console.error('initT6 falhou:', e); }
-                   try { initT7(); } catch(e){ console.error('initT7 falhou:', e); } }, 100);
+                   try { initT7(); } catch(e){ console.error('initT7 falhou:', e); }
+                   try { initT10(); } catch(e){ console.error('initT10 falhou:', e); } }, 100);
 startTimer();
 
 // Data em tempo real + "Atualizado em" em TODAS as telas
