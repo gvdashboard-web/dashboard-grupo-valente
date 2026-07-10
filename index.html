@@ -1451,6 +1451,27 @@ const TEND_LABEL = (() => {
   const ab=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   return [3,2,1].map(k => ab[((m-1-k)%12+12)%12]).join('·');
 })();
+// Mini-barras de vendas por dia (dia 1..hoje, zeros incluidos; melhor dia em dourado)
+function miniBarsDia(porDia, cor, altura) {
+  const dias = D.dias_corridos_passados || 1;
+  const mesNum = (D.hoje || '----').split('-')[1] || '';
+  const vals = [];
+  for (let d = 1; d <= dias; d++) {
+    const k = String(d).padStart(2, '0') + '/' + mesNum;
+    vals.push(porDia && porDia[k] ? porDia[k] : 0);
+  }
+  const max = Math.max.apply(null, vals.concat([1]));
+  const W = 100, H = altura || 46, gap = 1.2;
+  const bw = (W - gap * (dias - 1)) / dias;
+  const rects = vals.map((v, i) => {
+    const h = v > 0 ? Math.max(2, (v / max) * (H - 4)) : 1.2;
+    const x = i * (bw + gap);
+    const isMax = v === max && v > 0;
+    return `<rect x="${x.toFixed(2)}" y="${(H - h).toFixed(2)}" width="${bw.toFixed(2)}" height="${h.toFixed(2)}" rx="1" fill="${isMax ? 'var(--gold)' : cor}" opacity="${isMax ? 1 : 0.45}"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px;display:block">${rects}</svg>`;
+}
+
 // Aplica nos labels estaticos (o HTML acima ja foi parseado neste ponto)
 (function(){
   const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
@@ -1527,6 +1548,13 @@ function initT1() {
         <div style="font-size:11px;color:var(--muted);margin-top:4px">vs ${fmtK(D.ticket_geral.abril)} (${MES_ANT.toLowerCase()})</div>
       </div>
       <div style="font-size:11px;color:var(--dim);margin-top:12px">${totalPedidos} pedidos no mês</div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+          <span style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase">Vendas por dia</span>
+          <span style="font-size:10px;color:var(--dim)">melhor dia ✦</span>
+        </div>
+        ${miniBarsDia(D.vendas_por_dia, '#5b6b85', 54)}
+      </div>
     `;
   }
   const dateStr = new Date(D.hoje+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
@@ -1599,6 +1627,14 @@ function initT2() {
             <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:${proj>=v.meta.global?'var(--green)':'var(--red)'}">${fmtK(proj)}</div>
           </div>
         ` : `<div style="font-size:13px;color:var(--muted)">${MES_ANT}: ${fmtK(v.data.fat_abril)}</div>`}
+      </div>
+
+      <div style="margin-top:auto">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+          <span style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase">Vendas por dia · ${MES_ATUAL}</span>
+          <span style="font-size:10px;color:var(--dim)">melhor dia em dourado</span>
+        </div>
+        ${miniBarsDia(v.data.por_dia, v.cor, 72)}
       </div>
     `;
     container.appendChild(div);
@@ -2094,13 +2130,7 @@ function initT7() {
       ...chartDefaults,
       plugins:{
         ...chartDefaults.plugins,
-        legend:{
-          display:true,
-          labels:{
-            color:'#8892a4',font:{size:14,family:'Inter'},boxWidth:14,padding:20,
-            filter: item => !item.text.startsWith('Tendência')
-          }
-        },
+        legend:{ display:false },  // legenda ja existe no header da tela (vend-legend)
         tooltip:{
           ...chartDefaults.plugins.tooltip,
           callbacks:{
@@ -2112,6 +2142,10 @@ function initT7() {
             }
           }
         }
+      },
+      scales: {
+        ...chartDefaults.scales,
+        y: { ...chartDefaults.scales.y, min: 0 }
       }
     }
   });
