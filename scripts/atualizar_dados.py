@@ -660,16 +660,19 @@ def patch_global(p, agg):
         'total_maio'
     )
 
-    # ticket_geral - atualiza só "maio" + var_pct
+    # ticket_geral — chaves "maio"/"abril" sao legado: maio = mes ATUAL,
+    # abril = mes ANTERIOR (label no dash e dinamico). Usa o ticket real do
+    # mes anterior quando disponivel; senao mantem o valor que ja estava.
     m = re.search(r'ticket_geral:\s*\{[^}]+\}', p.html)
     if m:
         old = m.group(0)
-        # extrai abril
-        abril_m = re.search(r'abril:\s*([\d.]+)', old)
-        abril = float(abril_m.group(1)) if abril_m else 0
         ticket = agg['total'] / max(agg['pedidos'], 1)
-        var_pct = ((ticket - abril) / abril * 100) if abril else 0
-        new = f'ticket_geral: {{ maio: {ticket:.2f}, abril: {abril:g}, var_pct: {var_pct:.1f} }}'
+        t_ant = agg.get('ticket_mes_ant')
+        if not t_ant:
+            ant_m = re.search(r'abril:\s*([\d.]+)', old)
+            t_ant = float(ant_m.group(1)) if ant_m else 0
+        var_pct = ((ticket - t_ant) / t_ant * 100) if t_ant else 0
+        new = f'ticket_geral: {{ maio: {ticket:.2f}, abril: {t_ant:.2f}, var_pct: {var_pct:.1f} }}'
         p.replace(re.escape(old), new, 'ticket_geral')
 
     # projeção: total * dias_total / dias_passados
@@ -1251,6 +1254,19 @@ def main():
         else:
             ano_ant, mes_ant = ano, mes - 1
         mes_ant_str = f'{ano_ant:04d}-{mes_ant:02d}'
+
+        # Ticket medio do mes anterior (real, das vendas) — sem isso o
+        # comparativo de ticket na Visao Geral fica congelado no valor antigo.
+        try:
+            vendas_ant = [x for x in vendas_resumo
+                          if x['data'].year == ano_ant and x['data'].month == mes_ant]
+            if vendas_ant:
+                agg['ticket_mes_ant'] = sum(x['valor'] for x in vendas_ant) / len(vendas_ant)
+                print(f'  Ticket medio de {mes_ant_str}: R$ {agg["ticket_mes_ant"]:,.2f} '
+                      f'({len(vendas_ant)} vendas)')
+        except NameError:
+            pass  # vendas_resumo falhou la em cima — mantem comportamento antigo
+
         try:
             html_atual = target.read_text()
         except Exception:
