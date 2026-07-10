@@ -70,15 +70,30 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          if git diff --cached --quiet; then
-            echo "Nenhuma mudanca — index.html identico ao anterior"
-          else
+          # Retry: quando o schedule do GH atrasa e colide com o cron-job.org,
+          # outro run pode commitar entre nosso checkout e o push (rejeicao
+          # non-fast-forward — ~6% dos runs). Realinha preservando NOSSO
+          # index.html e tenta de novo; se ficar identico, nada a fazer.
+          ok=""
+          for i in 1 2 3; do
+            git add index.html
+            if git diff --cached --quiet; then
+              echo "Nenhuma mudanca — index.html identico ao anterior"
+              ok=1; break
+            fi
             DATA=$(date '+%Y-%m-%d %H:%M UTC')
             git commit -m "Atualizacao automatica via API Conta Azul — $DATA"
-            git push
-            echo "Commit feito!"
-          fi
+            if git push; then
+              echo "Commit feito!"
+              ok=1; break
+            fi
+            echo "Push rejeitado (corrida com outro run) — realinhando, tentativa $i"
+            cp index.html /tmp/nosso_index.html
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/nosso_index.html index.html
+          done
+          if [ -z "$ok" ]; then echo "ERRO: push falhou apos 3 tentativas"; exit 1; fi
 
       # Alerta visivel quando o dashboard quebra: abre UMA issue (sem spam) e
       # fecha automaticamente quando o workflow volta a passar.
