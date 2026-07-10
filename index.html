@@ -1524,7 +1524,7 @@ function initT1() {
       <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;line-height:1;color:var(--text);margin-top:10px;letter-spacing:1px">${fmtK(D.ticket_geral.maio)}</div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:${cor}">${seta} ${Math.abs(tkVar).toFixed(1).replace('.',',')}%</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">vs ${fmtK(D.ticket_geral.abril)} (abril)</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">vs ${fmtK(D.ticket_geral.abril)} (${MES_ANT.toLowerCase()})</div>
       </div>
       <div style="font-size:11px;color:var(--dim);margin-top:12px">${totalPedidos} pedidos no mês</div>
     `;
@@ -1598,7 +1598,7 @@ function initT2() {
             <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Projeção</div>
             <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:${proj>=v.meta.global?'var(--green)':'var(--red)'}">${fmtK(proj)}</div>
           </div>
-        ` : `<div style="font-size:13px;color:var(--muted)">Abril: ${fmtK(v.data.fat_abril)}</div>`}
+        ` : `<div style="font-size:13px;color:var(--muted)">${MES_ANT}: ${fmtK(v.data.fat_abril)}</div>`}
       </div>
     `;
     container.appendChild(div);
@@ -1920,8 +1920,12 @@ const chartDefaults = {
 
 function initT6() {
   if (typeof Chart === 'undefined') { console.warn('Chart.js nao carregou — pulando initT6'); return; }
-  const labels = D.historico_total.map(h => mesLabel(h.mes));
-  const totais = D.historico_total.map(h => h.vlr_bruto);
+  // Janela: 12 meses fechados + mes atual (senao o grafico cresce sem limite)
+  const HIST6 = D.historico_total.slice(-13);
+  const labels = HIST6.map(h => mesLabel(h.mes));
+  const totais = HIST6.map(h => h.vlr_bruto);
+  const t7title = document.querySelector('#t7 .hist-card-title');
+  if (t7title && labels.length) t7title.textContent = `Faturamento Total por Mês — ${labels[0]} a ${labels[labels.length-1]}`;
   const meta = D.meta_empresa;
 
   // Regressão linear para tendência
@@ -1955,8 +1959,8 @@ function initT6() {
   const projPattern = sctx.createPattern(stripeCanvas, 'repeat');
 
   // Stacked: barra dividida em "Realizado" (sólido) + "Projeção" (listrado) só pro mes atual
-  const realizadoData = D.historico_total.map(h => h.projecao ? (D.total_maio || 0) : h.vlr_bruto);
-  const projecaoData  = D.historico_total.map(h => h.projecao ? Math.max(0, h.vlr_bruto - (D.total_maio || 0)) : 0);
+  const realizadoData = HIST6.map(h => h.projecao ? (D.total_maio || 0) : h.vlr_bruto);
+  const projecaoData  = HIST6.map(h => h.projecao ? Math.max(0, h.vlr_bruto - (D.total_maio || 0)) : 0);
 
   new Chart(document.getElementById('chart-hist-total'), {
     type:'bar',
@@ -1967,10 +1971,10 @@ function initT6() {
           type:'bar',
           label: 'Realizado',
           data: realizadoData,
-          backgroundColor: D.historico_total.map(h => h.projecao ? 'rgba(245,166,35,0.85)' : 'rgba(59,130,246,0.55)'),
-          borderColor: D.historico_total.map(h => h.projecao ? '#f5a623' : '#3b82f6'),
+          backgroundColor: HIST6.map(h => h.projecao ? 'rgba(245,166,35,0.85)' : 'rgba(59,130,246,0.55)'),
+          borderColor: HIST6.map(h => h.projecao ? '#f5a623' : '#3b82f6'),
           borderWidth: 2,
-          borderRadius: (ctx) => D.historico_total[ctx.dataIndex].projecao ? 0 : 10,
+          borderRadius: (ctx) => HIST6[ctx.dataIndex].projecao ? 0 : 10,
           stack: 'a', order: 2
         },
         {
@@ -2018,7 +2022,7 @@ function initT6() {
           callbacks:{
             label: ctx => {
               if (ctx.dataset.label === 'Projeção') {
-                const total = D.historico_total[ctx.dataIndex].vlr_bruto;
+                const total = HIST6[ctx.dataIndex].vlr_bruto;
                 const real = D.total_maio || 0;
                 return [' Projeção total: ' + fmtK(total), ' (Realizado: ' + fmtK(real) + ')'];
               }
@@ -2033,12 +2037,16 @@ function initT6() {
 
 function initT7() {
   if (typeof Chart === 'undefined') { console.warn('Chart.js nao carregou — pulando initT7'); return; }
-  const labels = D.historico_total.map(h => mesLabel(h.mes));
+  // Janela: 12 meses fechados + mes atual (senao o grafico cresce sem limite)
+  const HIST = D.historico_total.slice(-13);
+  const labels = HIST.map(h => mesLabel(h.mes));
+  const t8title = document.querySelector('#t8 .hist-card-title');
+  if (t8title && labels.length) t8title.textContent = `Faturamento por Vendedor — ${labels[0]} a ${labels[labels.length-1]}`;
   const n = labels.length;
   const getHist = nome => {
     const map = {};
     D.historico_vendedor[nome].forEach(h => map[h.mes]=h.vlr_bruto);
-    return D.historico_total.map(h => map[h.mes]||0);
+    return HIST.map(h => map[h.mes]||0);
   };
   // Regressão linear
   const tendencia = vals => {
@@ -2059,7 +2067,7 @@ function initT7() {
   const jData = getHist('Jalena');
 
   // Indices que representam projecao (mes atual ainda em curso)
-  const projIdx = new Set(D.historico_total.map((h,i) => h.projecao ? i : -1).filter(i => i>=0));
+  const projIdx = new Set(HIST.map((h,i) => h.projecao ? i : -1).filter(i => i>=0));
   const isProj = i => projIdx.has(i);
   const ptBg  = (color,bgPage) => Array.from({length:n},(_,i)=> isProj(i) ? bgPage : color);
   const ptBor = (color,bgPage) => Array.from({length:n},(_,i)=> isProj(i) ? color : bgPage);
@@ -2211,17 +2219,19 @@ function initT0() {
   document.getElementById('t0-label').textContent =
     'Faturamento · ' + (D.mes_nome_atual || 'Maio') + ' ' + (D.ano_atual || '2026');
 
-  // Delta vs mes anterior (em pontos equivalentes — dia X de mes atual vs dia X de mes anterior)
-  // Para o hero: simples comparativo de TOTAL. Sinal e cor.
+  // Delta vs mes anterior PROPORCIONAL (mesmos dias corridos) — comparar 9
+  // dias de julho com junho inteiro daria -60% vermelho o mes todo.
   const dEl = document.getElementById('t0-delta');
   if (totalAnt > 0) {
-    const variacao = ((totalAtual - totalAnt) / totalAnt) * 100;
+    const diasPass = D.dias_corridos_passados || 1;
+    const antProporcional = totalAnt * diasPass / DIAS_MES_ANT;
+    const variacao = ((totalAtual - antProporcional) / antProporcional) * 100;
     const positivo = variacao >= 0;
     const cor = positivo ? 'var(--green)' : 'var(--red)';
     const seta = positivo ? '▲' : '▼';
     dEl.innerHTML = `
       <div class="hero-delta-pct" style="color:${cor}">${seta} ${Math.abs(variacao).toFixed(1).replace('.',',')}%</div>
-      <div class="hero-delta-text">vs <strong style="color:var(--text)">${fmtK(totalAnt)}</strong><br/>em ${mesNomeAnt}</div>
+      <div class="hero-delta-text">vs <strong style="color:var(--text)">${fmtK(antProporcional)}</strong> em ${mesNomeAnt}<br/>(mesmos ${diasPass} dias)</div>
     `;
   } else {
     dEl.innerHTML = `<div class="hero-delta-text">Sem dados de ${mesNomeAnt} pra comparar</div>`;
