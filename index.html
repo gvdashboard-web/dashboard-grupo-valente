@@ -2982,6 +2982,16 @@ function checkStaleData() {
 checkStaleData();
 setInterval(checkStaleData, 60000);
 
+// Auto-reload de kiosk: recarrega a cada 30min pra (1) puxar dados frescos
+// sem refresh manual e (2) zerar a memoria do browser da TV — pagina que
+// roda dias sem reload acaba morrendo por OOM (tela preta travada).
+// So recarrega se a rede responder; offline mantem a pagina atual de pe.
+setInterval(() => {
+  fetch(location.href, { method: 'HEAD', cache: 'no-store' })
+    .then(r => { if (r.ok) location.reload(); })
+    .catch(() => {});
+}, 30 * 60 * 1000);
+
 // Garante foco no body pra TVs Samsung/LG capturarem keydown
 document.body.focus();
 
