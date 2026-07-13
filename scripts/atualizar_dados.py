@@ -26,6 +26,11 @@ from gerar_relatorio import (
 )
 
 # Map vendor key (curto) -> nome cheio como aparece no D{}
+# Marcas com vaga GARANTIDA nas telas de evolucao (t11/t12), mesmo fora do
+# top 7 — lancamentos estrategicos que precisam de acompanhamento continuo.
+# (Existe copia JS no index.html: MARCAS_FIXAS — manter em sincronia.)
+MARCAS_WATCHLIST = ['KOMAKAI']
+
 VENDOR_FULL_NAMES = {
     'erivan': 'Erivan Lima',
     'lucas':  'Lucas de Mello Valente',
@@ -536,8 +541,17 @@ def aggregate(items):
 
     # Evolucao diaria das TOP 7 marcas do mes (OUTROS fora — e balaio, nao
     # marca). Valores diarios BRUTOS por item; o JS acumula na hora de plotar.
+    # Watchlist tem vaga garantida (substitui a ultima), mesmo vendendo pouco
+    # ou nada no mes — linha no chao tambem e informacao.
     top7_marcas = [k for k, _ in sorted(marcas_grupo.items(), key=lambda kv: -kv[1])
                    if k != 'OUTROS'][:7]
+    for mw in MARCAS_WATCHLIST:
+        if mw not in top7_marcas:
+            if len(top7_marcas) >= 7:
+                top7_marcas[-1] = mw
+            else:
+                top7_marcas.append(mw)
+    top7_marcas.sort(key=lambda k: -marcas_grupo.get(k, 0))
     evol_marcas = [
         {'m': mk, 'dias': [[d, round(v, 2)] for d, v in sorted(marcas_dia[mk].items())]}
         for mk in top7_marcas
