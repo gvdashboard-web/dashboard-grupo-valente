@@ -414,6 +414,7 @@ def aggregate(items):
     pedidos = set(); clientes = set(); itens = 0
     por_dia = defaultdict(float)
     marcas_grupo = defaultdict(float)  # ranking de marcas do GRUPO (todos os vendedores)
+    marcas_dia = defaultdict(lambda: defaultdict(float))  # marca -> dia do mes -> valor (tela evolucao por marca)
     por_v = defaultdict(lambda: {
         'total':0.0,'abc':0.0,'pedidos':set(),'clientes':set(),'itens':0,
         'top_clientes':defaultdict(float),'top_produtos':defaultdict(float),
@@ -478,6 +479,7 @@ def aggregate(items):
         marca_dash = inferir_marca(it['produto'])
         pv['top_marcas'][marca_dash] += it['valor']
         marcas_grupo[marca_dash] += it['valor']
+        marcas_dia[marca_dash][it['data'].day] += it['valor']
         sales_agg[it['sale']]['top_produto'][it['produto']] += it['valor']
         if it['categoria'] in ABC_CATS:
             pv['abc'] += it['valor']
@@ -532,6 +534,15 @@ def aggregate(items):
             })
     vendas_recentes.sort(key=lambda x: -x['v'])
 
+    # Evolucao diaria das TOP 7 marcas do mes (OUTROS fora — e balaio, nao
+    # marca). Valores diarios BRUTOS por item; o JS acumula na hora de plotar.
+    top7_marcas = [k for k, _ in sorted(marcas_grupo.items(), key=lambda kv: -kv[1])
+                   if k != 'OUTROS'][:7]
+    evol_marcas = [
+        {'m': mk, 'dias': [[d, round(v, 2)] for d, v in sorted(marcas_dia[mk].items())]}
+        for mk in top7_marcas
+    ]
+
     out = {
         'ano': ano,
         'mes': mes,
@@ -555,6 +566,7 @@ def aggregate(items):
         'dias_com_venda': len([d for d,v in por_dia.items() if v > 0]),
         'vendas_por_dia': {d: round(v,2) for d,v in sorted(por_dia.items())},
         'vendas_recentes': vendas_recentes,
+        'evol_marcas': evol_marcas,
         'marcas_grupo': sorted([[k, round(v,2)] for k,v in marcas_grupo.items()],
                                key=lambda x: -x[1])[:5],
         'vendedores': {},
@@ -1146,6 +1158,32 @@ def patch_extras(p, agg, mes_ant_val, mes_ant_nome):
                 count=1
             )
             p.changes.append(('evol_diaria (inserido)', '', f'{len(evol)} meses'))
+
+    # evol_marcas — evolucao diaria das top 7 marcas do mes (tela t11).
+    # Recomputado a cada run; serializado numa unica linha.
+    evm = agg.get('evol_marcas')
+    if evm is not None:
+        def _esc_m(s):
+            return (s or '').replace('\\', '\\\\').replace('"', '\\"')
+        def _dias_js_m(dias):
+            return '[' + ','.join(f'[{d},{v:g}]' for d, v in dias) + ']'
+        evm_js = '[' + ','.join(
+            '{m:"' + _esc_m(e['m']) + '", dias:' + _dias_js_m(e['dias']) + '}' for e in evm
+        ) + ']'
+        if re.search(r'evol_marcas:\s*\[.*\]', p.html):
+            p.replace(r'evol_marcas:\s*\[.*\]', f'evol_marcas: {evm_js}', 'evol_marcas')
+        else:
+            # insere depois do evol_diaria; se nao existir, depois do marcas_grupo
+            anchor = r'(evol_diaria:\s*\[[^\n]*\],)'
+            if not re.search(anchor, p.html):
+                anchor = r'(marcas_grupo:\s*\[[^\n]*\],)'
+            p.html = re.sub(
+                anchor,
+                lambda m: m.group(1) + f'\n  evol_marcas: {evm_js},',
+                p.html,
+                count=1
+            )
+            p.changes.append(('evol_marcas (inserido)', '', f'{len(evm)} marcas'))
 
 
 def roll_historico_se_virou_mes(p, agg):
