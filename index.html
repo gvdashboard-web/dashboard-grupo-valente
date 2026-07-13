@@ -1498,6 +1498,10 @@ const TEND_LABEL = (() => {
   const ab=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   return [3,2,1].map(k => ab[((m-1-k)%12+12)%12]).join('·');
 })();
+// Marcas com vaga garantida nas telas de evolucao (t11 ja vem resolvida do
+// script; t12 aplica aqui). Copia python: MARCAS_WATCHLIST no atualizar_dados.py.
+const MARCAS_FIXAS = ['KOMAKAI'];
+
 // Mini-barras de vendas por dia (dia 1..hoje, zeros incluidos; melhor dia em dourado)
 function miniBarsDia(porDia, cor, altura) {
   const dias = D.dias_corridos_passados || 1;
@@ -2400,10 +2404,21 @@ function initT12() {
   const labels = hist.map(h => mesLabel(h.mes)).concat([mesLabel(mesAtualStr)]);
   const iProj = labels.length - 1;
 
-  // top 7 pela soma dos meses fechados (OUTROS fora)
+  // top 7 pela soma dos meses fechados (OUTROS fora); watchlist tem vaga
+  // garantida — substitui a de menor soma que nao seja fixa
   const soma = {};
   hist.forEach(h => h.marcas.forEach(([k, v]) => { if (k !== 'OUTROS') soma[k] = (soma[k] || 0) + v; }));
-  const top7 = Object.entries(soma).sort((a, b) => b[1] - a[1]).slice(0, 7).map(x => x[0]);
+  const ordenado = Object.entries(soma).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  const escolhidas = ordenado.slice(0, 7);
+  MARCAS_FIXAS.forEach(mf => {
+    if (!escolhidas.includes(mf)) {
+      for (let i = escolhidas.length - 1; i >= 0; i--) {
+        if (!MARCAS_FIXAS.includes(escolhidas[i])) { escolhidas.splice(i, 1); break; }
+      }
+      escolhidas.push(mf);
+    }
+  });
+  const top7 = escolhidas.sort((a, b) => (soma[b] || 0) - (soma[a] || 0));
 
   const CORES12 = ['#f5a623','#3b82f6','#22d3ee','#a855f7','#22c55e','#ec4899','#94a3b8'];
   const BG12 = '#0d1220';
@@ -2983,6 +2998,16 @@ function checkStaleData() {
 }
 checkStaleData();
 setInterval(checkStaleData, 60000);
+
+// Auto-reload de kiosk: recarrega a cada 30min pra (1) puxar dados frescos
+// sem refresh manual e (2) zerar a memoria do browser da TV — pagina que
+// roda dias sem reload acaba morrendo por OOM (tela preta travada).
+// So recarrega se a rede responder; offline mantem a pagina atual de pe.
+setInterval(() => {
+  fetch(location.href, { method: 'HEAD', cache: 'no-store' })
+    .then(r => { if (r.ok) location.reload(); })
+    .catch(() => {});
+}, 30 * 60 * 1000);
 
 // Garante foco no body pra TVs Samsung/LG capturarem keydown
 document.body.focus();
