@@ -1297,6 +1297,26 @@
   </div>
 </div>
 
+<!-- TELA 12: HISTÓRICO 12 MESES POR MARCA -->
+<div class="screen" id="t12">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">GRUPO VALENTE</div>
+      <div class="screen-label">Marcas · Histórico 12 Meses</div>
+    </div>
+    <div class="header-right">
+      <div class="date-display"></div>
+      <div class="dots"></div>
+    </div>
+  </div>
+  <div class="hist-grid" style="grid-template-columns:1fr;">
+    <div class="hist-card">
+      <div class="hist-card-title" id="t12-title">Faturamento mensal por marca — Top 7</div>
+      <div class="chart-wrap"><canvas id="chart-marcas-hist"></canvas></div>
+    </div>
+  </div>
+</div>
+
 <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:0%"></div></div>
 <div id="pause-indicator" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(245,166,35,0.95);color:#0d1220;padding:10px 20px;border-radius:99px;font-weight:800;font-size:13px;letter-spacing:2px;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,0.4)">
   <span style="font-size:16px">⏸</span> PAUSADO <span style="opacity:0.6;font-weight:600;letter-spacing:1px;margin-left:8px">espaço pra continuar</span>
@@ -2363,6 +2383,97 @@ function initT11() {
   });
 }
 
+// TELA 12: historico mensal por marca — 12 meses fechados + mes atual
+// projetado (tracejado, ponto vazado, como t7/t8). Top 7 pela soma da janela.
+function initT12() {
+  if (typeof Chart === 'undefined') { console.warn('Chart.js nao carregou — pulando initT12'); return; }
+  const hist = (D.marcas_hist && D.marcas_hist.dados) || [];
+  if (!hist.length) { console.warn('marcas_hist vazio — pulando initT12'); return; }
+
+  const atualMap = {};
+  (D.marcas_mes_atual || []).forEach(([k, v]) => { atualMap[k] = v; });
+  const fator = (D.dias_corridos_total || 30) / Math.max(D.dias_corridos_passados || 1, 1);
+  const mesAtualStr = (D.hoje || '').slice(0, 7);
+
+  const labels = hist.map(h => mesLabel(h.mes)).concat([mesLabel(mesAtualStr)]);
+  const iProj = labels.length - 1;
+
+  // top 7 pela soma dos meses fechados (OUTROS fora)
+  const soma = {};
+  hist.forEach(h => h.marcas.forEach(([k, v]) => { if (k !== 'OUTROS') soma[k] = (soma[k] || 0) + v; }));
+  const top7 = Object.entries(soma).sort((a, b) => b[1] - a[1]).slice(0, 7).map(x => x[0]);
+
+  const CORES12 = ['#f5a623','#3b82f6','#22d3ee','#a855f7','#22c55e','#ec4899','#94a3b8'];
+  const BG12 = '#0d1220';
+  const datasets = top7.map((mk, idx) => {
+    const data = hist.map(h => { const f = h.marcas.find(x => x[0] === mk); return f ? f[1] : 0; });
+    data.push(Math.round((atualMap[mk] || 0) * fator * 100) / 100);
+    const cor = CORES12[idx % CORES12.length];
+    return {
+      label: mk, data,
+      borderColor: cor, backgroundColor: 'transparent',
+      borderWidth: idx === 0 ? 4 : 2.5, tension: 0.35,
+      pointRadius: 3.5, pointBorderWidth: 2, pointBorderColor: cor,
+      pointBackgroundColor: data.map((_, i) => i === iProj ? BG12 : cor),
+      segment: { borderDash: ctx => ctx.p1DataIndex === iProj ? [6, 4] : undefined },
+      order: idx,
+    };
+  });
+
+  const t12t = document.getElementById('t12-title');
+  if (t12t) t12t.textContent = `Faturamento mensal por marca — ${labels[0]} a ${labels[iProj]} (projeção) · Top ${top7.length}`;
+
+  const endLabels12 = {
+    id: 'endLabelsMarcasHist',
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      const itens = [];
+      chart.data.datasets.forEach((ds, i) => {
+        const meta = chart.getDatasetMeta(i);
+        if (!meta || meta.hidden) return;
+        const el = meta.data[ds.data.length - 1];
+        if (!el) return;
+        itens.push({ y: el.y, x: el.x, cor: ds.borderColor, txt: ds.label });
+      });
+      itens.sort((a, b) => a.y - b.y);
+      for (let i = 1; i < itens.length; i++) {
+        if (itens[i].y - itens[i - 1].y < 26) itens[i].y = itens[i - 1].y + 26;
+      }
+      ctx.save();
+      ctx.font = "700 15px Inter, sans-serif";
+      ctx.textBaseline = 'middle';
+      itens.forEach(it => { ctx.fillStyle = it.cor; ctx.fillText(it.txt, it.x + 12, it.y); });
+      ctx.restore();
+    }
+  };
+
+  new Chart(document.getElementById('chart-marcas-hist'), {
+    type: 'line',
+    data: { labels, datasets },
+    plugins: [endLabels12],
+    options: {
+      ...chartDefaults,
+      layout: { padding: { right: 190 } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        ...chartDefaults.plugins,
+        legend: { display: false },
+        tooltip: {
+          ...chartDefaults.plugins.tooltip, mode: 'index', intersect: false,
+          itemSort: (a, b) => (b.raw || 0) - (a.raw || 0),
+          callbacks: {
+            label: ctx => ' ' + ctx.dataset.label + ': ' + fmtK(ctx.raw) + (ctx.dataIndex === iProj ? ' (projeção)' : '')
+          }
+        }
+      },
+      scales: {
+        ...chartDefaults.scales,
+        y: { ...chartDefaults.scales.y }
+      }
+    }
+  });
+}
+
 // DOTS
 function buildDots() {
   const total = SCREENS.length;
@@ -2627,7 +2738,7 @@ function renderBadges(vendNome, containerId) {
 }
 
 // ROTAÇÃO
-const SCREENS = ['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11'];
+const SCREENS = ['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11','t12'];
 // Durações por slide proporcionais à densidade
 const DURATIONS = {
   t0: 8000,   // Hero (abertura)
@@ -2830,7 +2941,8 @@ initT9();
 setTimeout(() => { try { initT6(); } catch(e){ console.error('initT6 falhou:', e); }
                    try { initT7(); } catch(e){ console.error('initT7 falhou:', e); }
                    try { initT10(); } catch(e){ console.error('initT10 falhou:', e); }
-                   try { initT11(); } catch(e){ console.error('initT11 falhou:', e); } }, 100);
+                   try { initT11(); } catch(e){ console.error('initT11 falhou:', e); }
+                   try { initT12(); } catch(e){ console.error('initT12 falhou:', e); } }, 100);
 startTimer();
 
 // Data em tempo real + "Atualizado em" em TODAS as telas
