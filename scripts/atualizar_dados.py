@@ -567,6 +567,9 @@ def aggregate(items):
         'vendas_por_dia': {d: round(v,2) for d,v in sorted(por_dia.items())},
         'vendas_recentes': vendas_recentes,
         'evol_marcas': evol_marcas,
+        # todas as marcas do mes atual (nao trunca) — ponto de projecao da t12
+        'marcas_mes_atual': sorted([[k, round(v, 2)] for k, v in marcas_grupo.items()],
+                                   key=lambda x: -x[1]),
         'marcas_grupo': sorted([[k, round(v,2)] for k,v in marcas_grupo.items()],
                                key=lambda x: -x[1])[:5],
         'vendedores': {},
@@ -1185,6 +1188,46 @@ def patch_extras(p, agg, mes_ant_val, mes_ant_nome):
             )
             p.changes.append(('evol_marcas (inserido)', '', f'{len(evm)} marcas'))
 
+    # marcas_mes_atual — todas as marcas do mes corrente (ponto de projecao da t12)
+    mma = agg.get('marcas_mes_atual')
+    if mma is not None:
+        mma_js = js_array_of_pairs(mma)
+        if re.search(r'marcas_mes_atual:\s*\[[^\n]*\]', p.html):
+            p.replace(r'marcas_mes_atual:\s*\[[^\n]*\]', f'marcas_mes_atual: {mma_js}', 'marcas_mes_atual')
+        else:
+            p.html = re.sub(
+                r'(marcas_grupo:\s*\[[^\n]*\],)',
+                lambda m: m.group(1) + f'\n  marcas_mes_atual: {mma_js},',
+                p.html, count=1
+            )
+            p.changes.append(('marcas_mes_atual (inserido)', '', f'{len(mma)} marcas'))
+
+    # marcas_hist — cache de 12 meses fechados por marca (tela t12).
+    # Formato precisa casar com o parse de cache no main().
+    mh2 = agg.get('marcas_hist')
+    if mh2:
+        def _esc_h(s):
+            return (s or '').replace('\\', '\\\\').replace('"', '\\"')
+        def _marcas_js(lst):
+            # decimal fixo (nunca %g): o parse do cache no main() le [\d.]+ —
+            # notacao cientifica ou perda de digitos quebraria o round-trip
+            return '[' + ','.join(f'["{_esc_h(k)}",{v:.2f}]' for k, v in lst) + ']'
+        mh_js = '{v:1, dados:[' + ','.join(
+            '{mes:"' + e['mes'] + '", marcas:' + _marcas_js(e['marcas']) + '}' for e in mh2
+        ) + ']}'
+        if re.search(r'marcas_hist:\s*\{.*\}', p.html):
+            p.replace(r'marcas_hist:\s*\{.*\}', f'marcas_hist: {mh_js}', 'marcas_hist')
+        else:
+            anchor = r'(evol_marcas:\s*\[[^\n]*\],)'
+            if not re.search(anchor, p.html):
+                anchor = r'(marcas_grupo:\s*\[[^\n]*\],)'
+            p.html = re.sub(
+                anchor,
+                lambda m: m.group(1) + f'\n  marcas_hist: {mh_js},',
+                p.html, count=1
+            )
+            p.changes.append(('marcas_hist (inserido)', '', f'{len(mh2)} meses'))
+
 
 def roll_historico_se_virou_mes(p, agg):
     """Quando o mes muda (ex: maio -> junho), o ponto com 'projecao:true' anterior
@@ -1376,6 +1419,53 @@ def main():
             except Exception as e:
                 print(f'  AVISO: falha buscando marcas do mes anterior: {e}')
                 agg['marcas_grupo_ant'] = None
+
+        # Historico mensal por marca — 12 meses fechados (tela t12).
+        # Cache incremental no proprio index.html: busca itens SO dos meses
+        # que faltam. Primeira run = backfill completo (~12 fetches, uma vez);
+        # depois, 1 fetch por virada de mes. Falha em um mes nao derruba o
+        # run: patcha o que tem e completa na proxima execucao.
+        cache_h = {}
+        meses_nec = []
+        try:
+            a2, m2 = ano, mes
+            for _ in range(12):
+                if m2 == 1:
+                    a2, m2 = a2 - 1, 12
+                else:
+                    m2 -= 1
+                meses_nec.append(f'{a2:04d}-{m2:02d}')
+            meses_nec = list(reversed(meses_nec))  # asc, mais antigo primeiro
+
+            cache_h = {}
+            mh = re.search(r'marcas_hist: \{v:1, dados:\[(.*)\]\}', html_atual)
+            if mh:
+                for bloco in re.finditer(r'\{mes:"(\d{4}-\d{2})", marcas:\[(.*?)\]\}', mh.group(1)):
+                    pares = re.findall(r'\["((?:[^"\\]|\\.)*)",([\d.]+)\]', bloco.group(2))
+                    cache_h[bloco.group(1)] = [
+                        [p[0].replace('\\"', '"').replace('\\\\', '\\'), float(p[1])]
+                        for p in pares
+                    ]
+
+            faltando = [ms for ms in meses_nec if ms not in cache_h]
+            if faltando:
+                print(f'  Historico de marcas: faltam {len(faltando)} mes(es) no cache: {faltando}')
+            for ms in faltando:
+                a3, m3 = int(ms[:4]), int(ms[5:7])
+                items_h = fetch_items_from_ca(a3, m3, client=client)
+                por_marca_h = defaultdict(float)
+                for it_h in items_h:
+                    if VENDOR_FULL_NAMES.get(it_h['vendor']):
+                        por_marca_h[inferir_marca(it_h['produto'])] += it_h['valor']
+                cache_h[ms] = sorted([[k, round(v, 2)] for k, v in por_marca_h.items()],
+                                     key=lambda x: -x[1])
+            agg['marcas_hist'] = [{'mes': ms, 'marcas': cache_h[ms]}
+                                  for ms in meses_nec if ms in cache_h]
+        except Exception as e:
+            print(f'  AVISO: falha no historico de marcas: {e}')
+            # patcha o que conseguiu ate agora (parcial > nada)
+            parcial = [{'mes': ms, 'marcas': cache_h[ms]} for ms in meses_nec if ms in cache_h]
+            agg['marcas_hist'] = parcial or None
     else:
         if not args.pivot or not args.transacional:
             print('ERRO: precisa de --pivot + --transacional OU --ca-fetch', file=sys.stderr)
