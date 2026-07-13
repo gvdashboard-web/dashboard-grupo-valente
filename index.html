@@ -1277,6 +1277,26 @@
   </div>
 </div>
 
+<!-- TELA 11: EVOLUÇÃO POR MARCA (top 7 do mês) -->
+<div class="screen" id="t11">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">GRUPO VALENTE</div>
+      <div class="screen-label" id="t11-screen-label">Marcas · Acumulado no Mês</div>
+    </div>
+    <div class="header-right">
+      <div class="date-display"></div>
+      <div class="dots"></div>
+    </div>
+  </div>
+  <div class="hist-grid" style="grid-template-columns:1fr;">
+    <div class="hist-card">
+      <div class="hist-card-title" id="t11-title">Faturamento acumulado por marca — Top 7</div>
+      <div class="chart-wrap"><canvas id="chart-evol-marcas"></canvas></div>
+    </div>
+  </div>
+</div>
+
 <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:0%"></div></div>
 <div id="pause-indicator" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(245,166,35,0.95);color:#0d1220;padding:10px 20px;border-radius:99px;font-weight:800;font-size:13px;letter-spacing:2px;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,0.4)">
   <span style="font-size:16px">⏸</span> PAUSADO <span style="opacity:0.6;font-weight:600;letter-spacing:1px;margin-left:8px">espaço pra continuar</span>
@@ -2243,6 +2263,105 @@ function initT10() {
   });
 }
 
+// TELA 11: evolução acumulada por MARCA — top 7 do mês corrente.
+// Sem legenda: rótulo (nome + valor) na ponta de cada linha, com
+// espalhamento vertical pra não sobrepor. Líder em dourado e mais grossa.
+function initT11() {
+  if (typeof Chart === 'undefined') { console.warn('Chart.js nao carregou — pulando initT11'); return; }
+  const marcas = D.evol_marcas || [];
+  if (!marcas.length) { console.warn('evol_marcas vazio — pulando initT11'); return; }
+
+  const t11t = document.getElementById('t11-title');
+  if (t11t) t11t.textContent = `Faturamento acumulado por marca — Top ${marcas.length} · ${MES_ATUAL}`;
+
+  const DAYS = 31;
+  const labels = Array.from({length:DAYS}, (_,i)=>i+1);
+  // ultimo dia com venda em QUALQUER marca — todas as linhas terminam juntas
+  const ultimoDia = Math.max(...marcas.map(e => e.dias.length ? Math.max(...e.dias.map(x=>x[0])) : 0));
+  const CORES = ['#f5a623','#3b82f6','#22d3ee','#a855f7','#22c55e','#ec4899','#94a3b8'];
+
+  const datasets = marcas.map((e, idx) => {
+    const porDia = {}; e.dias.forEach(([d,v]) => { porDia[d] = v; });
+    let acc = 0; const data = [];
+    for (let d=1; d<=DAYS; d++) {
+      if (d > ultimoDia) { data.push(null); continue; }
+      acc += (porDia[d] || 0);
+      data.push(Math.round(acc*100)/100);
+    }
+    return {
+      label: e.m,
+      data,
+      borderColor: CORES[idx % CORES.length],
+      backgroundColor: idx === 0 ? 'rgba(245,166,35,0.08)' : 'transparent',
+      borderWidth: idx === 0 ? 4.5 : 2.5,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      fill: idx === 0,
+      order: idx,
+    };
+  });
+
+  // Plugin: rótulos na ponta das linhas (nome + acumulado), sem colisão
+  const endLabels = {
+    id: 'endLabelsMarcas',
+    afterDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      const itens = [];
+      chart.data.datasets.forEach((ds, i) => {
+        const meta = chart.getDatasetMeta(i);
+        if (!meta || meta.hidden) return;
+        let last = -1;
+        for (let j = ds.data.length - 1; j >= 0; j--) { if (ds.data[j] != null) { last = j; break; } }
+        if (last < 0 || !meta.data[last]) return;
+        itens.push({ y: meta.data[last].y, x: meta.data[last].x,
+                     cor: ds.borderColor, txt: ds.label + '  ' + fmtK(ds.data[last]) });
+      });
+      itens.sort((a,b) => a.y - b.y);
+      for (let i = 1; i < itens.length; i++) {
+        if (itens[i].y - itens[i-1].y < 26) itens[i].y = itens[i-1].y + 26;
+      }
+      ctx.save();
+      ctx.font = "700 15px Inter, sans-serif";
+      ctx.textBaseline = 'middle';
+      itens.forEach(it => {
+        ctx.fillStyle = it.cor;
+        ctx.fillText(it.txt, it.x + 12, it.y);
+      });
+      ctx.restore();
+    }
+  };
+
+  new Chart(document.getElementById('chart-evol-marcas'), {
+    type:'line',
+    data:{ labels, datasets },
+    plugins:[endLabels],
+    options:{
+      ...chartDefaults,
+      spanGaps:false,
+      layout:{ padding:{ right: 230 } },
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        ...chartDefaults.plugins,
+        legend:{ display:false },
+        tooltip:{
+          ...chartDefaults.plugins.tooltip, mode:'index', intersect:false,
+          itemSort: (a,b) => (b.raw||0) - (a.raw||0),
+          callbacks:{
+            title: items => 'Dia ' + (items[0] ? items[0].label : ''),
+            label: ctx => ctx.raw==null ? null : ' ' + ctx.dataset.label + ': ' + fmtK(ctx.raw)
+          }
+        }
+      },
+      scales:{
+        ...chartDefaults.scales,
+        x:{ ...chartDefaults.scales.x, title:{ display:true, text:'Dia do mês', color:'#6b7fa0', font:{size:13,family:'Inter'} } },
+        y:{ ...chartDefaults.scales.y }
+      }
+    }
+  });
+}
+
 // DOTS
 function buildDots() {
   const total = SCREENS.length;
@@ -2507,7 +2626,7 @@ function renderBadges(vendNome, containerId) {
 }
 
 // ROTAÇÃO
-const SCREENS = ['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10'];
+const SCREENS = ['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11'];
 // Durações por slide proporcionais à densidade
 const DURATIONS = {
   t0: 8000,   // Hero (abertura)
@@ -2709,7 +2828,8 @@ renderBadges('Jalena', 't6-badges');
 initT9();
 setTimeout(() => { try { initT6(); } catch(e){ console.error('initT6 falhou:', e); }
                    try { initT7(); } catch(e){ console.error('initT7 falhou:', e); }
-                   try { initT10(); } catch(e){ console.error('initT10 falhou:', e); } }, 100);
+                   try { initT10(); } catch(e){ console.error('initT10 falhou:', e); }
+                   try { initT11(); } catch(e){ console.error('initT11 falhou:', e); } }, 100);
 startTimer();
 
 // Data em tempo real + "Atualizado em" em TODAS as telas
