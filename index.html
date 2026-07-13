@@ -1069,6 +1069,7 @@
         <div class="day-value" id="t1-d2">R$ 0</div>
         <div class="day-ritmo" id="t1-d2-ritmo">—</div>
       </div>
+      <div class="day-sales" id="t1-d2-list" style="flex:1;align-self:stretch;overflow:hidden;margin:18px 0 12px"></div>
       <div class="kpi-sub" id="t1-d2-data">—</div>
     </div>
     <!-- Ontem -->
@@ -1078,6 +1079,7 @@
         <div class="day-value" id="t1-d1">R$ 0</div>
         <div class="day-ritmo" id="t1-d1-ritmo">—</div>
       </div>
+      <div class="day-sales" id="t1-d1-list" style="flex:1;align-self:stretch;overflow:hidden;margin:18px 0 12px"></div>
       <div class="kpi-sub" id="t1-d1-data">—</div>
     </div>
     <!-- Hoje -->
@@ -1087,6 +1089,7 @@
         <div class="day-value" id="t1-hoje">R$ 0</div>
         <div class="day-ritmo" id="t1-hoje-ritmo">—</div>
       </div>
+      <div class="day-sales" id="t1-hoje-list" style="flex:1;align-self:stretch;overflow:hidden;margin:18px 0 12px"></div>
       <div class="kpi-sub" id="t1-hoje-data">—</div>
     </div>
   </div>
@@ -1532,6 +1535,26 @@ function initT1() {
   document.getElementById('t1-hoje-ritmo').innerHTML = renderRitmo(lookup(fmtDia(hojeDt)));
   document.getElementById('t1-d1-ritmo').innerHTML = renderRitmo(lookup(fmtDia(ontemDt)));
   document.getElementById('t1-d2-ritmo').innerHTML = renderRitmo(lookup(fmtDia(anteontemDt)));
+
+  // Clientes do dia (valor desc), bolinha na cor do vendedor
+  const KCOLOR = {erivan:'var(--erivan)', roger:'var(--roger)', lucas:'var(--lucas)', jalena:'var(--jalena)'};
+  const renderDaySales = (elId, diaKey) => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const all = (D.vendas_recentes || []).filter(x => x.d === diaKey);
+    const MAX = 8;
+    const rows = all.slice(0, MAX).map(x => `
+      <div style="display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <span style="width:8px;height:8px;border-radius:50%;background:${KCOLOR[x.k]||'var(--muted)'};flex:0 0 8px"></span>
+        <span style="flex:1;min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.c}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.5px;color:var(--muted)">${fmtK(x.v)}</span>
+      </div>`).join('');
+    const extra = all.length > MAX ? `<div style="font-size:10px;color:var(--dim);margin-top:8px;text-align:center">+ ${all.length - MAX} venda(s)</div>` : '';
+    el.innerHTML = rows + extra;
+  };
+  renderDaySales('t1-hoje-list', fmtDia(hojeDt));
+  renderDaySales('t1-d1-list', fmtDia(ontemDt));
+  renderDaySales('t1-d2-list', fmtDia(anteontemDt));
 
   // Ticket médio geral — layout compacto pra coluna estreita
   const tkVar = D.ticket_geral.var_pct;
