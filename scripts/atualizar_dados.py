@@ -514,6 +514,24 @@ def aggregate(items):
                 'produto_top_marca': prod_marca,
             }
 
+    # Vendas dos ultimos 3 dias corridos (listas de clientes nos cards
+    # Anteontem/Ontem/Hoje da t1). Ordenadas por valor desc; k = chave curta
+    # do vendedor (o dash mapeia pra cor). Dias sem venda simplesmente nao
+    # aparecem — o card fica vazio, como hoje.
+    NAME_TO_KEY_VR = {v: k for k, v in VENDOR_FULL_NAMES.items()}
+    agora_manaus = datetime.now(MANAUS_TZ).replace(tzinfo=None)
+    vendas_recentes = []
+    for s in sales_agg.values():
+        delta = (agora_manaus.date() - s['data'].date()).days
+        if 0 <= delta <= 2:
+            vendas_recentes.append({
+                'd': s['data'].strftime('%d/%m'),
+                'c': s['cliente'],
+                'v': round(s['valor'], 2),
+                'k': NAME_TO_KEY_VR.get(s['vendor'], ''),
+            })
+    vendas_recentes.sort(key=lambda x: -x['v'])
+
     out = {
         'ano': ano,
         'mes': mes,
@@ -536,6 +554,7 @@ def aggregate(items):
         'itens': itens,
         'dias_com_venda': len([d for d,v in por_dia.items() if v > 0]),
         'vendas_por_dia': {d: round(v,2) for d,v in sorted(por_dia.items())},
+        'vendas_recentes': vendas_recentes,
         'marcas_grupo': sorted([[k, round(v,2)] for k,v in marcas_grupo.items()],
                                key=lambda x: -x[1])[:5],
         'vendedores': {},
@@ -695,6 +714,29 @@ def patch_global(p, agg):
         f'vendas_por_dia: {js_obj_dia_valor(agg["vendas_por_dia"])}',
         'vendas_por_dia'
     )
+
+    # vendas_recentes (listas de clientes nos cards de dia da t1)
+    vr = agg.get('vendas_recentes')
+    if vr is not None:
+        def _esc(s):
+            return (s or '').replace('\\', '\\\\').replace('"', '\\"')
+        vr_js = '[' + ','.join(
+            f'{{d:"{x["d"]}",c:"{_esc(x["c"])}",v:{x["v"]:g},k:"{x["k"]}"}}' for x in vr
+        ) + ']'
+        if re.search(r'vendas_recentes:\s*\[[^\n]*\]', p.html):
+            p.replace(
+                r'vendas_recentes:\s*\[[^\n]*\]',
+                f'vendas_recentes: {vr_js}',
+                'vendas_recentes'
+            )
+        else:
+            p.html = re.sub(
+                r'(vendas_por_dia:\s*\{[^}]*\},?)',
+                lambda m: m.group(1) + f'\n  vendas_recentes: {vr_js},',
+                p.html,
+                count=1
+            )
+            p.changes.append(('vendas_recentes (inserido)', '', f'{len(vr)} venda(s)'))
 
 
 def _find_section_bounds(html, section_name):
