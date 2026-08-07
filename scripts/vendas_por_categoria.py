@@ -78,6 +78,7 @@ def main():
     por_grupo = defaultdict(float)
     por_grupo_mes = defaultdict(lambda: defaultdict(float))
     top_por_grupo = defaultdict(lambda: defaultdict(float))
+    prod_por_grupo = defaultdict(lambda: defaultdict(lambda: {'v': 0.0, 'q': 0}))
     liquido_total = 0.0
     n_vendas = 0
 
@@ -105,11 +106,15 @@ def main():
                     continue
                 for it in itens:
                     prod = it.get('nome', '')
-                    val = (it.get('valor', 0) or 0) * (it.get('quantidade', 0) or 0)
+                    qtd = it.get('quantidade', 0) or 0
+                    val = (it.get('valor', 0) or 0) * qtd
                     g = GRUPO.get(categorizar(prod), 'Outros')
                     por_grupo[g] += val
                     por_grupo_mes[ym][g] += val
                     top_por_grupo[g][marca_lista(prod)] += val
+                    pp = prod_por_grupo[g][prod or '(sem nome)']
+                    pp['v'] += val
+                    pp['q'] += int(qtd)
                     mes_bruto += val
             if len(vendas) < 500:
                 break
@@ -132,6 +137,14 @@ def main():
             for mk, mv in marcas:
                 print(f'  {mk:<20} R$ {mv:>10,.2f}')
 
+    # Produtos de cada grupo (Outros completo — e onde mora o nao-classificado)
+    for g in sorted(prod_por_grupo, key=lambda k: -por_grupo[k]):
+        prods = sorted(prod_por_grupo[g].items(), key=lambda kv: -kv[1]['v'])
+        lim = None if g == 'Outros' else 8
+        print(f'\nProdutos — {g} ({len(prods)} distinto(s)):')
+        for pn, pv in prods[:lim]:
+            print(f'  {pn[:52]:<52} {pv["q"]:>4}un  R$ {pv["v"]:>10,.2f}')
+
     print('\n===JSON===')
     print(json.dumps({
         'vendedor': nome_alvo,
@@ -146,6 +159,9 @@ def main():
         'top_marcas': {g: [[mk, round(mv, 2)] for mk, mv in
                            sorted(d.items(), key=lambda kv: -kv[1])[:5]]
                        for g, d in top_por_grupo.items()},
+        'produtos': {g: [[pn, round(pv['v'], 2), pv['q']] for pn, pv in
+                         sorted(d.items(), key=lambda kv: -kv[1]['v'])[:20]]
+                     for g, d in prod_por_grupo.items()},
     }, ensure_ascii=False))
     print('===FIM===')
 
