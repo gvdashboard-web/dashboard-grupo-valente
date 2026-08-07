@@ -46,7 +46,9 @@ def categorizar(nome_produto):
     B = ['BIG BARBER','BTH','ELEMENT','EVOLUTION','M2A','PLAY','SHARK BARBER','ALFA','LOOK']
     C = ['BABOON','DON ALCIDES','FOX']
     D = ['MANTA','RMC','TECHNATURE','ESSENCIAL']
-    AC_A = ['BARBER POLE','KOMAKAI','SUPERBARBA','HIGMAXX']
+    # HIGIMAXX e a grafia real do cadastro (toalha); HIGMAXX fica por
+    # compatibilidade com itens antigos escritos sem o segundo "I".
+    AC_A = ['BARBER POLE','KOMAKAI','SUPERBARBA','HIGIMAXX','HIGMAXX']
     AC_B = ['CABELL','CRICKET','FENIX','SUPREME','TALGE','TOPPIK','UMI','MOFASHI','ALLEY','GRUPO VALENTE',
             'PENTE','CAPA DE CORTE','GOLA HIGIENICA','GOLA HIGIÊNICA','TRIPÉ','TRIPE','SACOLA']
     MAQ = ['ANDIS','BABYLISS','GALLETZ','GBS','JRL','KEMEI','WMARK','WAHL','ZHORN','GAMA','VGR','FALCONPRO','FALCON PRO']
@@ -75,7 +77,7 @@ def marca(nome_produto):
     for marca in ['MACHO-LANDIA','MACHO-LÂNDIA','BARBAROUS','RAUK','KANNEP','EMBAIXADOR','CHOICE BRO',
                   'ELEGANCE','B.URB','BURB','BIG BARBER','BTH','ELEMENT','EVOLUTION','M2A','PLAY','SHARK',
                   'ALFA LOOK','BABOON','DON ALCIDES','FOX','MANTA','RMC','TECHNATURE','ESSENCIAL',
-                  'BARBER POLE','KOMAKAI','SUPERBARBA','HIGMAXX','CABELL','CRICKET','FENIX','SUPREME',
+                  'BARBER POLE','KOMAKAI','SUPERBARBA','HIGIMAXX','HIGMAXX','CABELL','CRICKET','FENIX','SUPREME',
                   'TALGE','TOPPIK','UMI','MOFASHI','ALLEY','GRUPO VALENTE','ANDIS','BABYLISS','GALLETZ',
                   'GBS','JRL','KEMEI','WMARK','WAHL','ZHORN','GAMA','VGR','FALCONPRO','FALCON PRO',
                   'MARRI','LAV CHAMP','DOMPEL']:
