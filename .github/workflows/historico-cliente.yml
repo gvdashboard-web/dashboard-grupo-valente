@@ -1,0 +1,48 @@
+name: Histórico de Cliente (sob demanda)
+
+on:
+  workflow_dispatch:
+    inputs:
+      cliente:
+        description: 'Trecho do nome do cliente (ex: "soul")'
+        required: true
+        default: 'soul'
+        type: string
+      meses:
+        description: 'Quantos meses para trás (inclui o mês atual)'
+        required: true
+        default: '12'
+        type: string
+
+# MESMO grupo dos outros workflows: todos consomem o MESMO refresh_token
+# (single-use, rotacionado a cada uso) — rodar em paralelo = invalid_grant.
+concurrency:
+  group: update-dashboard
+  cancel-in-progress: false
+
+jobs:
+  cliente:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install pynacl
+
+      - name: Rodar consulta
+        env:
+          CA_CLIENT_ID: ${{ secrets.CA_CLIENT_ID }}
+          CA_CLIENT_SECRET: ${{ secrets.CA_CLIENT_SECRET }}
+          CA_REFRESH_TOKEN: ${{ secrets.CA_REFRESH_TOKEN }}
+          SECRETS_PAT: ${{ secrets.SECRETS_PAT }}
+        run: |
+          cd "${GITHUB_WORKSPACE}"
+          python3 scripts/historico_cliente.py \
+            "${{ github.event.inputs.cliente }}" \
+            "${{ github.event.inputs.meses }}"
