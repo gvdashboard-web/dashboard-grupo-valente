@@ -1,0 +1,62 @@
+name: Corrigir Meses Fechados (sob demanda)
+
+on:
+  workflow_dispatch:
+    inputs:
+      meses:
+        description: 'Meses a recalcular, separados por espaço (ex: "2026-06 2026-07")'
+        required: true
+        default: '2026-06 2026-07'
+        type: string
+
+# MESMO grupo dos outros workflows: todos consomem o MESMO refresh_token.
+concurrency:
+  group: update-dashboard
+  cancel-in-progress: false
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install pynacl
+
+      - name: Recalcular meses
+        env:
+          CA_CLIENT_ID: ${{ secrets.CA_CLIENT_ID }}
+          CA_CLIENT_SECRET: ${{ secrets.CA_CLIENT_SECRET }}
+          CA_REFRESH_TOKEN: ${{ secrets.CA_REFRESH_TOKEN }}
+          SECRETS_PAT: ${{ secrets.SECRETS_PAT }}
+        run: |
+          cd "${GITHUB_WORKSPACE}"
+          python3 scripts/corrigir_meses.py ${{ github.event.inputs.meses }} \
+            --target "${GITHUB_WORKSPACE}/index.html"
+
+      - name: Commit e push se houver mudanças
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          ok=""
+          for i in 1 2 3; do
+            git add index.html
+            if git diff --cached --quiet; then
+              echo "Nenhuma mudanca"; ok=1; break
+            fi
+            git commit -m "fix: recalculo de meses fechados (${{ github.event.inputs.meses }}) com valor liquido real"
+            if git push; then echo "Commit feito!"; ok=1; break; fi
+            echo "Push rejeitado — realinhando, tentativa $i"
+            cp index.html /tmp/nosso.html
+            git fetch origin main && git reset --hard origin/main
+            cp /tmp/nosso.html index.html
+          done
+          if [ -z "$ok" ]; then echo "ERRO: push falhou"; exit 1; fi
