@@ -112,8 +112,10 @@ def fetch_items_from_ca(ano, mes, client=None):
                     continue
                 cliente_nome = venda.get('cliente', {}).get('nome', '?')
                 # Total LIQUIDO da venda (ja com desconto/frete) — base do faturamento
-                venda_total_liq = venda.get('total', 0) or 0
-                soma_liq += venda_total_liq
+                # None = campo ausente (usa bruto como rede); 0 = a CA diz
+                # que a venda vale zero (bonificacao/brinde) e deve valer zero
+                venda_total_liq = venda.get('total')
+                soma_liq += (venda_total_liq or 0)
 
                 # Busca itens da venda
                 try:
@@ -450,7 +452,8 @@ def aggregate(items):
         vendas_uniq[sid]['bruto'] += it['valor']
     for vd in vendas_uniq.values():
         liq = vd['liq']
-        vd['valor'] = liq if (liq and liq > 0) else vd['bruto']
+        # so cai pro bruto quando o campo nao veio; total 0 e valor real
+        vd['valor'] = vd['bruto'] if liq is None else liq
 
     # PASSO 2 — faturamento (total, por vendedor, por dia, clientes, vendas) = LIQUIDO.
     for sid, vd in vendas_uniq.items():
