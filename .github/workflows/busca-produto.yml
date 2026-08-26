@@ -1,0 +1,44 @@
+name: Busca de Produto (sob demanda)
+
+on:
+  workflow_dispatch:
+    inputs:
+      termo:
+        description: 'Trecho do nome do produto (ex: "cadeira")'
+        required: true
+        default: 'cadeira'
+        type: string
+      meses:
+        description: 'Quantos meses para trás'
+        required: true
+        default: '36'
+        type: string
+
+concurrency:
+  group: update-dashboard
+  cancel-in-progress: false
+
+jobs:
+  busca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Instalar dependências
+        run: pip install pynacl
+      - name: Rodar busca
+        env:
+          CA_CLIENT_ID: ${{ secrets.CA_CLIENT_ID }}
+          CA_CLIENT_SECRET: ${{ secrets.CA_CLIENT_SECRET }}
+          CA_REFRESH_TOKEN: ${{ secrets.CA_REFRESH_TOKEN }}
+          SECRETS_PAT: ${{ secrets.SECRETS_PAT }}
+        run: |
+          cd "${GITHUB_WORKSPACE}"
+          python3 scripts/busca_produto.py \
+            "${{ github.event.inputs.termo }}" \
+            "${{ github.event.inputs.meses }}"
