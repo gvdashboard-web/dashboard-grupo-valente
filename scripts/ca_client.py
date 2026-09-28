@@ -9,8 +9,14 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.parse
 import urllib.request
+
+# Retry de chamadas a API: 5xx e 429 sao passageiros na Conta Azul
+RETRY_CODES = {429, 500, 502, 503, 504}
+RETRY_MAX = 4
+RETRY_BASE_S = 3
 
 TOKEN_URL = 'https://auth.contaazul.com/oauth2/token'
 API_BASE = 'https://api-v2.contaazul.com/v1'
@@ -160,17 +166,52 @@ class ContaAzulClient:
             method=method
         )
 
-        try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                content = resp.read().decode()
-                return json.loads(content) if content else {}
-        except urllib.error.HTTPError as e:
-            if e.code == 401 and _retry:
-                # Token expirou — renova e tenta de novo
-                self._refresh()
-                return self._request(method, path, params, body, _retry=False)
-            err_body = e.read().decode()
-            raise RuntimeError(f'API erro HTTP {e.code}: {err_body[:500]}') from e
+        # 5xx/429 da CA sao instabilidade passageira e derrubavam o run inteiro
+        # (503 no /venda/vendedores = ~20% das execucoes). Tenta de novo com
+        # espera crescente antes de desistir.
+        ultimo_erro = None
+        for tentativa in range(RETRY_MAX):
+            try:
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    content = resp.read().decode()
+                    return json.loads(content) if content else {}
+            except urllib.error.HTTPError as e:
+                if e.code == 401 and _retry:
+                    # Token expirou — renova e tenta de novo
+                    self._refresh()
+                    return self._request(method, path, params, body, _retry=False)
+                err_body = e.read().decode()
+                if e.code in RETRY_CODES and tentativa < RETRY_MAX - 1:
+                    espera = RETRY_BASE_S * (2 ** tentativa)
+                    print(f'[ca_client] HTTP {e.code} em {path} — tentativa '
+                          f'{tentativa + 1}/{RETRY_MAX}, aguardando {espera}s',
+                          file=sys.stderr)
+                    time.sleep(espera)
+                    # Request nao pode ser reusado apos falha: monta de novo
+                    req = urllib.request.Request(
+                        url, data=data,
+                        headers={
+                            'Authorization': f'Bearer {self.access_token}',
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        method=method
+                    )
+                    ultimo_erro = e
+                    continue
+                raise RuntimeError(f'API erro HTTP {e.code}: {err_body[:500]}') from e
+            except (urllib.error.URLError, TimeoutError) as e:
+                # queda de rede/timeout tambem e passageiro
+                if tentativa < RETRY_MAX - 1:
+                    espera = RETRY_BASE_S * (2 ** tentativa)
+                    print(f'[ca_client] rede falhou em {path} ({e}) — tentativa '
+                          f'{tentativa + 1}/{RETRY_MAX}, aguardando {espera}s',
+                          file=sys.stderr)
+                    time.sleep(espera)
+                    ultimo_erro = e
+                    continue
+                raise RuntimeError(f'Rede falhou em {path}: {e}') from e
+        raise RuntimeError(f'API indisponivel em {path} apos {RETRY_MAX} tentativas: {ultimo_erro}')
 
     def get(self, path, **params):
         return self._request('GET', path, params=params)
