@@ -2552,6 +2552,52 @@ function initT0() {
   `;
 }
 
+// Historico de projecao: quanto o mes projetava fechar a cada dia.
+// O perfil por dia da semana vem dos MESES FECHADOS (D.evol_diaria),
+// contando inclusive os dias sem venda. Usar o mes corrente tornaria o
+// ultimo dia auto-realizavel (o delta daria sempre zero).
+// Nao precisa de dado novo no D{}: tudo sai do vendas_por_dia + evol_diaria.
+function perfilSemana() {
+  const meses = (D.evol_diaria || []).slice(0, -1);   // exclui o mes corrente
+  const soma = {}, qtd = {};
+  meses.forEach(e => {
+    const [yy, mm] = e.mes.split('-').map(Number);
+    const nd = new Date(yy, mm, 0).getDate();
+    const porDia = {};
+    (e.dias || []).forEach(([d, v]) => { porDia[d] = v; });
+    for (let d = 1; d <= nd; d++) {
+      const w = new Date(yy, mm - 1, d).getDay();
+      soma[w] = (soma[w] || 0) + (porDia[d] || 0);
+      qtd[w] = (qtd[w] || 0) + 1;
+    }
+  });
+  const p = {};
+  for (let w = 0; w < 7; w++) p[w] = qtd[w] ? soma[w] / qtd[w] : 0;
+  return p;
+}
+
+function historicoProjecao() {
+  const vpd = D.vendas_por_dia || {};
+  const dias = D.dias_corridos_total || 31;
+  const [yy, mm] = (D.hoje || '').split('-').map(Number);
+  if (!yy) return [];
+  const chaves = Object.keys(vpd);
+  if (!chaves.length) return [];
+  const perfil = perfilSemana();
+  const ultimo = Math.max(...chaves.map(k => parseInt(k.slice(0, 2), 10)));
+  const out = [];
+  let acc = 0;
+  for (let corte = 1; corte <= ultimo; corte++) {
+    const k = String(corte).padStart(2, '0') + '/' + String(mm).padStart(2, '0');
+    acc += (vpd[k] || 0);
+    let futuro = 0;
+    for (let d = corte + 1; d <= dias; d++) futuro += perfil[new Date(yy, mm - 1, d).getDay()] || 0;
+    out.push({ dia: corte, proj: acc + futuro });
+  }
+  // ignora os 4 primeiros dias: projecao sobre 1-2 dias e so ruido
+  return out.filter(o => o.dia >= 4);
+}
+
 function initT9() {
   // Slide "Marcha pra Meta" — quanto falta, ritmo, projecao, sparkline 7d
   const main = document.getElementById('t9-main');
@@ -2683,14 +2729,37 @@ function initT9() {
       <div style="font-size:22px;color:var(--muted);font-weight:500">
         em <strong style="color:var(--text);font-weight:800;font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:1px">${diasRestantes}</strong> dias
       </div>
-      ${sparkSvg ? `
-        <div style="display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--bg4);border-radius:12px;border:1px solid var(--border)">
+      ${(() => {
+        const H = historicoProjecao();
+        if (H.length < 2) return '';
+        const deltas = H.slice(1).map((o, i) => ({ dia: o.dia, d: o.proj - H[i].proj }));
+        const ultimo = deltas[deltas.length - 1];
+        const mx = Math.max(...deltas.map(x => Math.abs(x.d)), 1);
+        const W = 230, HH = 54, gap = 3;
+        const bw = (W - gap * (deltas.length - 1)) / deltas.length;
+        const meio = HH / 2;
+        const barras = deltas.map((x, i) => {
+          const h = Math.max(2, Math.abs(x.d) / mx * (meio - 3));
+          const y = x.d >= 0 ? meio - h : meio;
+          const cor = x.d >= 0 ? '#22c55e' : '#ef4444';
+          return `<rect x="${(i * (bw + gap)).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${cor}" opacity="${i === deltas.length - 1 ? 1 : 0.55}"/>`;
+        }).join('');
+        const up = ultimo.d >= 0;
+        return `
+        <div style="display:flex;align-items:center;gap:18px;padding:10px 18px;background:var(--bg4);border-radius:12px;border:1px solid var(--border)">
           <div style="display:flex;flex-direction:column;line-height:1">
-            <span style="font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;font-weight:800">Últimos 7d</span>
-            <span style="font-size:10px;color:var(--dim);margin-top:2px">queda do faltante</span>
+            <span style="font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;font-weight:800">Ontem na projeção</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:1px;margin-top:4px;color:${up ? 'var(--green)' : 'var(--red)'}">${up ? '▲' : '▼'} ${fmtK(Math.abs(ultimo.d))}</span>
           </div>
-          ${sparkSvg}
-        </div>` : ''}
+          <div style="display:flex;flex-direction:column;line-height:1">
+            <span style="font-size:10px;color:var(--dim);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:5px">impacto diário no fechamento</span>
+            <svg width="${W}" height="${HH}" viewBox="0 0 ${W} ${HH}" style="display:block">
+              <line x1="0" y1="${meio}" x2="${W}" y2="${meio}" stroke="#ffffff" stroke-opacity="0.12"/>
+              ${barras}
+            </svg>
+          </div>
+        </div>`;
+      })()}
     </div>
   `;
 
