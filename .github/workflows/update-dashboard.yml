@@ -24,7 +24,50 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ---- Guarda do refresh_token (06/11/26, mesma do BN1) ----
+  # A trava acima serializa, mas NAO basta: o run que espera na fila recebe
+  # os secrets do momento em que foi CRIADO. Se o run da frente (este ou um
+  # dos "sob demanda", que dividem o grupo) rotacionou o token nesse meio-
+  # tempo, o da fila sai com token queimado -> invalid_grant. Aqui: se o
+  # secret foi atualizado DEPOIS que este run nasceu, nao extrai — redispara
+  # um run novo (que nasce com o secret atual) e encerra sem erro.
+  # FAIL-OPEN: qualquer erro na checagem -> segue o fluxo normal de antes.
+  guarda:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write      # ler o proprio run + redisparar o workflow
+    outputs:
+      fresco: ${{ steps.check.outputs.fresco }}
+    steps:
+      - name: Secret do token ainda vale pra este run?
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SECRETS_PAT: ${{ secrets.SECRETS_PAT }}
+        run: |
+          CRIADO=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at 2>/dev/null || true)
+          SEC_UPD=$(GH_TOKEN="$SECRETS_PAT" gh api "repos/$GITHUB_REPOSITORY/actions/secrets/CA_REFRESH_TOKEN" --jq .updated_at 2>/dev/null || true)
+          echo "run criado em: ${CRIADO:-?} | secret atualizado em: ${SEC_UPD:-?}"
+          if [ -z "$CRIADO" ] || [ -z "$SEC_UPD" ]; then
+            echo "Nao deu pra checar — segue normal (fail-open)."
+            echo "fresco=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [[ "$SEC_UPD" > "$CRIADO" ]]; then
+            echo ">>> Token rotacionado por outro run depois que este nasceu. Redisparando um run novo."
+            if gh workflow run update-dashboard.yml --repo "$GITHUB_REPOSITORY" --ref main; then
+              echo "fresco=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "Redisparo falhou — segue normal (fail-open)."
+              echo "fresco=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "fresco=true" >> "$GITHUB_OUTPUT"
+          fi
+
   update:
+    needs: guarda
+    # Roda sempre, exceto quando a guarda redisparou (fresco=false).
+    if: ${{ !cancelled() && needs.guarda.outputs.fresco != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
