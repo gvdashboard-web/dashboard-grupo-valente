@@ -1350,7 +1350,9 @@ def main():
         print(f'Alvo nao existe: {target}', file=sys.stderr); sys.exit(1)
 
     if args.ca_fetch:
-        now = datetime.now()
+        # Horario de Manaus, nao do runner (UTC): com datetime.now() puro o
+        # mes virava as 20h de Manaus no ultimo dia (bug visto em 31/10/26).
+        now = datetime.now(MANAUS_TZ)
         ano = args.ano or now.year
         mes = args.mes or now.month
         print(f'Modo Conta Azul — buscando vendas de {MES_NOME_PT[mes]}/{ano}...')
@@ -1359,6 +1361,14 @@ def main():
         print(f'  Conectando à API Conta Azul...')
         client = ContaAzulClient()
         items = fetch_items_from_ca(ano, mes, client=client)
+        # Virada de mes: nos dias 1-3 e normal o mes corrente nao ter venda
+        # ainda (fim de semana, feriado). Sai com sucesso SEM mexer no
+        # index.html, em vez de falhar e abrir issue todo mes (#84, #87, #88).
+        # A partir do dia 4, mes vazio volta a ser erro (pode ser a API).
+        if not items and not (args.mes or args.ano) and now.day <= 3:
+            print(f'  {MES_NOME_PT[mes]}/{ano} ainda sem vendas (dia {now.day}) — '
+                  f'dashboard mantido como esta. Normal na virada do mes.')
+            return
         agg = aggregate(items)
 
         # Fetch leve dos 3 meses anteriores pra silencio + base_ativa
