@@ -111,12 +111,20 @@ jobs:
           STATICRYPT_PW: ${{ secrets.STATICRYPT_PASSWORD }}
         run: |
           cd "${GITHUB_WORKSPACE}"
-          # Roda so 1x/semana: segunda 03h UTC (~23h domingo Manaus) OU disparo manual.
+          # 1x por SEMANA, com RETRY DIARIO: tenta todo dia as 03h UTC ate conseguir
+          # uma vez na semana ISO; depois pula ate a semana virar. Disparo manual forca.
           if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            if [ "$(date -u +%u)" != "1" ] || [ "$(date -u +%H)" != "03" ]; then
-              echo "Fora da janela semanal de produtos (seg 03h UTC) — pulando."
+            if [ "$(date -u +%H)" != "03" ]; then
+              echo "Nao e 03h UTC — tentativa diaria so nessa hora. Pulando."
               exit 0
             fi
+            CURWEEK=$(date -u +%G-%V)
+            LASTWEEK=$(cat produtos/.last_run 2>/dev/null || echo "")
+            if [ "$CURWEEK" = "$LASTWEEK" ]; then
+              echo "Produtos ja atualizados nesta semana ($CURWEEK) — pulando."
+              exit 0
+            fi
+            echo "Semana $CURWEEK ainda nao atualizada — rodando (retry diario)."
           fi
           echo "1) Backfill de produtos (Conta Azul)..."
           python3 scripts/backfill_produtos.py
@@ -130,6 +138,7 @@ jobs:
             --template-instructions "Acesso restrito. Digite a senha para ver os relatorios." \
             --template-button "Entrar"
           mkdir -p produtos && cp produtos_enc/*.html produtos/
+          date -u +%G-%V > produtos/.last_run   # marca a semana ISO como feita (trava o retry diario)
           echo "4) Commit (so os produtos cifrados; cache de cliente NUNCA entra)..."
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
