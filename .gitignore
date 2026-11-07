@@ -1,0 +1,12 @@
+# Dados em claro (nomes de cliente + faturamento) — NUNCA commitar no repo público
+produtos_cache.json
+*_cache.json
+# Salt do staticrypt
+.staticrypt.json
+relatorios-produtos/.staticrypt.json
+# Saída local em CLARO dos relatórios (o que sobe é a versão cifrada em /produtos)
+relatorios-produtos/*.html
+# Lixo
+__pycache__/
+*.pyc
+.DS_Store
