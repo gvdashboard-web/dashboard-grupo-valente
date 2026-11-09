@@ -43,8 +43,17 @@ PRODUTOS = [
          subtitle='Tesouras profissionais · marca completa (sem distinção de modelo)',
          skus=['KOMAKAI · todos os modelos'], estoque_by_name=True, from_ym='2026-01',
          match=lambda n: 'KOMAKAI' in n),
+    dict(slug='embaixador', label='Embaixador',
+         subtitle='Marca completa · sem distinção de modelo',
+         skus=['EMBAIXADOR · todos os produtos'], estoque_by_name=True,
+         match=lambda n: 'EMBAIXADOR' in n),
+    dict(slug='bth', label='BTH',
+         subtitle='Marca completa · sem distinção de modelo',
+         skus=['BTH · todos os produtos'], estoque_by_name=True,
+         match=lambda n: 'BTH' in n),
 ]
 PROD_FROM = {p['slug']: p.get('from_ym') for p in PRODUTOS}
+NOMES_MATCH = defaultdict(set)   # debug: nomes distintos casados por produto (vai pro log do Action)
 
 def meses_range(ini_y, ini_m, fim_y, fim_m):
     y,m = ini_y, ini_m
@@ -128,6 +137,7 @@ for y,m in meses_range(2024,5,CUR_Y,CUR_M):
                         if prod.get('from_ym') and ym < prod['from_ym']:
                             break  # produto rastreado só a partir de from_ym (ex.: Komakai só 2026)
                         slug=prod['slug']
+                        NOMES_MATCH[slug].add(it.get('nome',''))
                         qeff = qtd * prod.get('qty_mult', lambda n:1)(nm)
                         mes_acc[slug]['qtd'] += qeff
                         mes_acc[slug]['receita'] += rec
@@ -153,3 +163,8 @@ for y,m in meses_range(2024,5,CUR_Y,CUR_M):
 print('\nBACKFILL COMPLETO. Cache salvo em '+OUT, file=sys.stderr)
 for slug,d in data.items():
     print(f"  {d['label']}: {d['total_qtd']} un · R$ {d['total_receita']:,.2f} · estoque {d['estoque']}", file=sys.stderr)
+print('\n=== NOMES CASADOS POR PRODUTO (conferencia) ===', file=sys.stderr)
+for slug in sorted(NOMES_MATCH):
+    print(f"  [{slug}] {len(NOMES_MATCH[slug])} nomes:", file=sys.stderr)
+    for nm in sorted(NOMES_MATCH[slug]):
+        print(f"      - {nm}", file=sys.stderr)
