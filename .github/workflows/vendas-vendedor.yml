@@ -1,0 +1,39 @@
+name: Vendas do vendedor (sob demanda)
+
+on:
+  workflow_dispatch:
+    inputs:
+      vendedor:
+        description: 'Nome do vendedor'
+        required: true
+        default: 'Jalena'
+        type: string
+      meses:
+        description: 'Quantos meses para trás'
+        required: true
+        default: '24'
+        type: string
+
+concurrency:
+  group: update-dashboard
+  cancel-in-progress: false
+
+jobs:
+  vendas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pynacl
+      - name: Listar vendas
+        env:
+          CA_CLIENT_ID: ${{ secrets.CA_CLIENT_ID }}
+          CA_CLIENT_SECRET: ${{ secrets.CA_CLIENT_SECRET }}
+          CA_REFRESH_TOKEN: ${{ secrets.CA_REFRESH_TOKEN }}
+          SECRETS_PAT: ${{ secrets.SECRETS_PAT }}
+        run: |
+          cd "${GITHUB_WORKSPACE}"
+          python3 scripts/vendas_vendedor.py "${{ github.event.inputs.vendedor }}" "${{ github.event.inputs.meses }}"
